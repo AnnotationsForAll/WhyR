@@ -1,0 +1,17 @@
+# Folders for building executables
+Debug/
+Release/
+Testing/
+
+# External code
+optionparser.h
+googletest/
+
+# Makefile files
+makefile.config
+
+# Eclipse files
+*.stackdump
+
+# Unit test files
+test/data/bc_files/*
