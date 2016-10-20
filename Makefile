@@ -123,7 +123,7 @@ TEST_H_FILES = $(wildcard test/*.hpp)
 test: build_test
 	-./Testing/$(EXE_NAME)
 
-build_test: Testing/$(EXE_NAME) $(BC_FILES)
+build_test: Testing/$(EXE_NAME) bc_files
 
 Testing/$(EXE_NAME): Testing $(TESTING_O_FILES) $(TEST_CASES_O_FILES) $(GTEST_O_FILES)
 	$(CXX) $(CXXFLAGS) $(OPTIONS) $(TESTING_OPTIONS) $(TESTING_O_FILES) $(TEST_CASES_O_FILES) $(GTEST_O_FILES) -o $@ $(LIBS)
