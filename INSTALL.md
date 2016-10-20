@@ -2,7 +2,8 @@
 
 To compile WhyR, you will need the following programs installed:
 
-* GNU Make or compatible make software
+* GNU Make or compatible make software, any recent version
+* Flex and Bison, any recent version
 * GNU G++, **at least version 5**
 * LLVM with development packages, **version 3.7.1 exactly**
 
