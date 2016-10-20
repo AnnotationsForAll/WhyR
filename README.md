@@ -1,15 +1,15 @@
-= WhyR
+# WhyR
 
 WhyR is a tool to convert programs written in [LLVM IR](http://llvm.org/) into a model for an [SMT solver](https://en.wikipedia.org/wiki/SMT_solver). It translates programs into models, and also allows you to write annotations for the code, which is translated to goals. In addition, annotations can be automatically generated, using WhyR's runtime error annotation generation (aka RTE generation). Currently, [the Why3 language](http://why3.lri.fr/) is WhyR's output format.
 
-= Design Goals
+## Design Goals
 
 * LLVM is low-level, so WhyR should prefer low-level input.
 * WhyR should favor provability over total correctness.
 * Even then, total correctness should be possible via simple configuration.
 * LLVM is a tool for other tools, not for users. WhyR should have tool-oriented features.
 
-= Current Features
+## Current Features
 
 * Takes input as files in LLVM's bitcode (`.bc`) format
 * Why3 model generation for the following LLVM constructs:
@@ -27,11 +27,11 @@ WhyR is a tool to convert programs written in [LLVM IR](http://llvm.org/) into a
 * Generation of annotations to ensure no undefined behavior occurs at runtime
 * The WhyR Annotation Language (WAR), a higher-level method of input to WhyR
 
-= Installation
+## Installation
 
 See `INSTALL.md` for more information on how to compile and run WhyR.
 
-= How to Use WhyR
+## How to Use WhyR
 
 Here is a simple program written in LLVM IR that computes the absolute value of a 32-bit int. Let's call this file `abs.ll`:
 
@@ -101,11 +101,11 @@ And it will print out the Why3 theory it created. To prove this file, run someth
 whyr abs.bc | why3 prove -F why -P alt-ergo -
 ```
 
-= Documentation
+## Documentation
 
-There are more features to WhyR then just ensures and requires clauses. Learn more about WhyR at our wiki!
+There are more features to WhyR then just ensures and requires clauses. Learn more about WhyR at [our wiki](https://github.com/AnnotationsForAll/WhyR/wiki)!
 
-= Planned Features
+## Planned Features
 
 * Ability to take files directly in LLVM's IR (`.ll`) format
 * The following LLVM features:
@@ -121,6 +121,6 @@ There are more features to WhyR then just ensures and requires clauses. Learn mo
 * Logical functions
 * Optimized Why3 output
 
-= Contributing
+## Contributing
 
 Contributions are welcome! This repository is already set up with files for the [Eclipse](http://www.eclipse.org/home/index.php) IDE; just import this project, and you get a working setup for contributing to WhyR.
