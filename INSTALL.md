@@ -42,9 +42,9 @@ The generated executable will be found in the `Release` folder.
 ## Known Working Compilation Targets
 
 * Linux
-** Found to be working on Ubuntu and derivatives.
+ * Found to be working on Ubuntu and derivatives.
 * Windows
-** Requires [Cygwin](https://www.cygwin.com/) to properly compile.
+ * Requires [Cygwin](https://www.cygwin.com/) to properly compile.
 
 = Running WhyR
 
