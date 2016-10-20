@@ -103,7 +103,10 @@ LLVMASFLAGS =
 $(BC_FILES): test/data/bc_files/%.bc: test/data/ir_files/%.ll
 	$(LLVMAS) $(LLVMASFLAGS) $< -o $@
 
-bc_files: $(BC_FILES)
+test/data/bc_files:
+	mkdir test/data/bc_files
+
+bc_files: test/data/bc_files $(BC_FILES)
 
 ##########################
 # TESTING
