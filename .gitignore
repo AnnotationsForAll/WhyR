@@ -15,3 +15,8 @@ makefile.config
 
 # Unit test files
 test/data/bc_files/*
+
+# lex/yacc files
+src/war_parser.hpp
+src/war_lexer.hpp
+
