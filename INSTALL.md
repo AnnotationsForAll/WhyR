@@ -46,7 +46,7 @@ The generated executable will be found in the `Release` folder.
 * Windows
  * Requires [Cygwin](https://www.cygwin.com/) to properly compile.
 
-= Running WhyR
+# Running WhyR
 
 Running WhyR, whether from binary or from source, requires LLVM to be installed, **version 3.7.1 exactly**. Get LLVM from  [here](http://llvm.org/) if you don't have it.
 

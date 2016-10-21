@@ -15,10 +15,10 @@ WhyR is a tool to convert programs written in [LLVM IR](http://llvm.org/) into a
 * Why3 model generation for the following LLVM constructs:
  * Most common LLVM instructions: Arithmetic, bitwise operations, casts, branches, calls, memory operations...
  * LLVM data types:
-  * Integers of any size
-  * Floats, doubles
-  * Array types
-  * PHI nodes
+   * Integers of any size
+   * Floats, doubles
+   * Array types
+   * PHI nodes
  * Indirect branches and block addresses
  * Memory operations (loading, storing, checking if valid addresses...)
  * Global variables
@@ -67,7 +67,7 @@ This means "the result of this function is equal to -n if n is less than 0, and 
 
 If one runs this program through WhyR, it will generate a file for Why3 to parse. Why3 will then attempt to verify one goal. This goal corresponds to the ensures clause that was added- It is trying to prove that for all possible inputs, the ensures clause holds true.
 
-However, the goal may not prove for all inputs. Why not? This is because there is potential undefined behavior in our program. What happens if %n is the Most negative signed integer? Because of how 2's complement arithmatic works, subtracting 0 from %n would cause signed overflow. SInce we use a "sub nsw" instruction, @abs will produce undefined behavior when presented with  %n of the smallest integer.
+However, the goal may not prove for all inputs. Why not? This is because there is potential undefined behavior in our program. What happens if %n is the most negative signed integer? Because of how 2's complement arithmetic works, subtracting 0 from %n would cause signed overflow. Since we use a "sub nsw" instruction, @abs will produce undefined behavior when presented with  %n of the smallest integer.
 
 To rectify this issue, we will require that all functions that call @abs do not pass in that value of %n. We can do this with a "whyr.requires" metadata:
 
