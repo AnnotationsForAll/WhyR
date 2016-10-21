@@ -398,7 +398,7 @@ namespace whyr {
     }
     
     string getWhy3StructFieldName(AnnotatedModule* module, StructType* type, unsigned index) {
-        return "field_" + to_string(index);
+        return getWhy3TypeName(type) + "_field_" + to_string(index);
     }
     
     // ABOUT CustomTruncate BELOW:
@@ -453,6 +453,9 @@ end
             out << "    use import " << getWhy3TheoryName(*ii) << endl;
         }
         for (unordered_set<ArrayType*>::iterator ii = data.info->arrayTypes.begin(); ii != data.info->arrayTypes.end(); ii++) {
+            out << "    use import " << getWhy3TheoryName(*ii) << endl;
+        }
+        for (unordered_set<StructType*>::iterator ii = data.info->structTypes.begin(); ii != data.info->structTypes.end(); ii++) {
             out << "    use import " << getWhy3TheoryName(*ii) << endl;
         }
         if (data.info->usesAlloc) {
@@ -1005,8 +1008,15 @@ end
                 addOperand(out, func->getModule(), inst, func);
                 out << " = ";
                 addOperand(out, func->getModule(), exInst->getAggregateOperand(), func);
+                Type* operandType = exInst->getAggregateOperand()->getType();
                 for (ExtractValueInst::idx_iterator ii = exInst->idx_begin(); ii != exInst->idx_end(); ii++) {
-                    out << "[" << *ii << "]";
+                    if (operandType->isArrayTy()) {
+                        out << "[" << *ii << "]";
+                        operandType = operandType->getArrayElementType();
+                    } else if (operandType->isStructTy()) {
+                        out << "." << getWhy3StructFieldName(func->getModule(), cast<StructType>(operandType), *ii);
+                        operandType = operandType->getStructElementType(*ii);
+                    }
                 }
                 break;
             }
@@ -1016,19 +1026,48 @@ end
                 addOperand(out, func->getModule(), inst, func);
                 out << " = ";
                 
-                int i = 0;
+                int i = 0; Type* operandType = insInst->getAggregateOperand()->getType();
                 for (InsertValueInst::idx_iterator ii = insInst->idx_begin(); ii != insInst->idx_end(); ii++) {
-                        addOperand(out, func->getModule(), insInst->getAggregateOperand(), func);
-                        for (int j = 0; j < i; j++) {
+                    if (operandType->isStructTy()) {
+                        out << "{";
+                    }
+                    addOperand(out, func->getModule(), insInst->getAggregateOperand(), func);
+                    
+                    Type* operandType2 = insInst->getAggregateOperand()->getType();
+                    for (int j = 0; j < i; j++) {
+                        if (operandType2->isArrayTy()) {
                             out << "[" << *(insInst->idx_begin()+j) << "]";
+                            operandType2 = operandType2->getArrayElementType();
+                        } else if (operandType2->isStructTy()) {
+                            out << "." << getWhy3StructFieldName(func->getModule(), cast<StructType>(operandType2), *(insInst->idx_begin()+j));
+                            operandType2 = operandType2->getStructElementType(*(insInst->idx_begin()+j));
                         }
+                    }
+                    
+                    if (operandType->isArrayTy()) {
                         out << "[" << *ii << " <- ";
+                        operandType = operandType->getArrayElementType();
+                    } else if (operandType->isStructTy()) {
+                        out << " with " << getWhy3TheoryName(operandType) << "." << getWhy3StructFieldName(func->getModule(), cast<StructType>(operandType), *ii) << " = ";
+                        operandType = operandType->getStructElementType(*ii);
+                    }
+                    
                     i++;
                 }
+                
+                Type* operandType3 = insInst->getAggregateOperand()->getType();
                 addOperand(out, func->getModule(), insInst->getInsertedValueOperand(), func);
+                string ending;
                 for (int j = 0; j < i; j++) {
-                    out << "]";
+                    if (operandType3->isArrayTy()) {
+                        ending = "]" + ending;
+                        operandType3 = operandType3->getArrayElementType();
+                    } else if (operandType3->isStructTy()) {
+                        ending = ";}" + ending;
+                        operandType3 = operandType3->getStructElementType(*(insInst->idx_begin()+j));
+                    }
                 }
+                out << ending;
                 break;
             }
             case Instruction::OtherOps::ICmp: {
