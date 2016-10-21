@@ -997,6 +997,11 @@ end
                         addOperand(out, func->getModule(), ii->get(), func);
                         out << "))";
                         currentType = currentType->getArrayElementType();
+                    } else if (currentType->isStructTy()) {
+                        unsigned index = cast<ConstantInt>(ii->get())->getLimitedValue();
+                        unsigned offset = func->getModule()->rawIR()->getDataLayout().getStructLayout(cast<StructType>(currentType))->getElementOffsetInBits(index);
+                        out << offset;
+                        currentType = currentType->getStructElementType(index);
                     }
                 }
                 out << ")))";
