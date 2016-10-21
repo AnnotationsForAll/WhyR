@@ -124,3 +124,9 @@ There are more features to WhyR then just ensures and requires clauses. Learn mo
 ## Contributing
 
 Contributions are welcome! This repository is already set up with files for the [Eclipse](http://www.eclipse.org/home/index.php) IDE; just import this project, and you get a working setup for contributing to WhyR.
+
+## Disclaimer
+
+This material is based upon work supported by the [National Science Foundation](https://nsf.gov/) under [Grant No. ACI-1314674](https://nsf.gov/awardsearch/showAward?AWD_ID=1314674).
+Any opinions, findings, and conclusions or recommendations expressed in this material are those of the author(s)
+and do not necessarily reflect the views of the National Science Foundation.
