@@ -5,6 +5,7 @@
 %token TOKEN_OP_SDIV TOKEN_OP_UDIV TOKEN_OP_REM TOKEN_OP_SREM TOKEN_OP_UREM TOKEN_OP_MOD TOKEN_OP_SMOD TOKEN_OP_UMOD TOKEN_OP_LSHL TOKEN_OP_LSHR TOKEN_OP_ASHR
 %token TOKEN_OP_UGT TOKEN_OP_UGE TOKEN_OP_ULT TOKEN_OP_ULE TOKEN_OP_SGT TOKEN_OP_SGE TOKEN_OP_SLT TOKEN_OP_SLE
 %token TOKEN_OP_FOEQ TOKEN_OP_FOGT TOKEN_OP_FOGE TOKEN_OP_FOLT TOKEN_OP_FOLE TOKEN_OP_FONE TOKEN_OP_FORD TOKEN_OP_FUEQ TOKEN_OP_FUGT TOKEN_OP_FUGE TOKEN_OP_FULT TOKEN_OP_FULE TOKEN_OP_FUNE TOKEN_OP_FUNO
+%token TOKEN_PACKED_STRUCT_BEGIN TOKEN_PACKED_STRUCT_END
 %token PREC_CAST PREC_QUANT PREC_LET PREC_UMINUS PREC_REF PREC_DEREF
 
 %left ','
@@ -64,7 +65,9 @@ typeid:
     | typeid '[' TOKEN_INT ']'                      { $$ = war_parse_llvm_array_type($1, $3); }
     | typeid '[' ']'                                { $$ = war_parse_llvm_array_0_type($1); }
     | TOKEN_TYPE_STRUCT TOKEN_WORD                  { $$ = war_parse_struct_type($2); }
-    | TOKEN_TYPE_STRUCT '{' type_list '}'           { $$ = war_parse_anon_struct_type($3); }
+    | TOKEN_TYPE_STRUCT '{' type_list '}'           { $$ = war_parse_anon_struct_type(false, $3); }
+    | TOKEN_TYPE_STRUCT TOKEN_PACKED_STRUCT_BEGIN type_list TOKEN_PACKED_STRUCT_END
+                                                    { $$ = war_parse_anon_struct_type(true , $3); }
     ;
 cast:
       '(' typeid ')' expr                           %prec PREC_CAST

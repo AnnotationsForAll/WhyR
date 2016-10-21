@@ -78,6 +78,8 @@ i[0-9]+                             {
 "!="                                { return TOKEN_OP_NEQ; }
 ">="                                { return TOKEN_OP_GE; }
 "<="                                { return TOKEN_OP_LE; }
+"<{"                                { return TOKEN_PACKED_STRUCT_BEGIN; }
+"}>"                                { return TOKEN_PACKED_STRUCT_END; }
 [a-zA-Z_][a-zA-Z0-9_]*              {
                                         yylval.token = yytext;
                                         return TOKEN_WORD;

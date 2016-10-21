@@ -1020,7 +1020,7 @@ WarNode war_parse_struct_type(WarNode node) {
     return ret;
 }
 
-WarNode war_parse_anon_struct_type(WarNode node) {
+WarNode war_parse_anon_struct_type(bool packed, WarNode node) {
     using namespace std; using namespace llvm; using namespace whyr;
     
     Type* types[node.exprs->size()]; int i = 0;
@@ -1035,7 +1035,7 @@ WarNode war_parse_anon_struct_type(WarNode node) {
         i++;
     }
     
-    StructType* type = StructType::get(warParserSource->func->rawIR()->getContext(), ArrayRef<Type*>(types, node.exprs->size()), false);
+    StructType* type = StructType::get(warParserSource->func->rawIR()->getContext(), ArrayRef<Type*>(types, node.exprs->size()), packed);
     WarNode ret;
     ret.expr = new LogicExpressionConstantType(new LogicTypeType(new LogicTypeLLVM(type, warParserSource), warParserSource), warParserSource);
     return ret;
