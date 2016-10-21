@@ -540,13 +540,13 @@ end
             }
         } else if (isa<ConstantStruct>(operand)) {
             ConstantStruct* cc = cast<ConstantStruct>(operand);
-            out << "({ ";
+            out << "{ ";
             for (unsigned i = 0; i < operand->getType()->getStructNumElements(); i++) {
                 out << getWhy3TheoryName(operand->getType()) << "." << getWhy3StructFieldName(module, cc->getType(), i) << " = ";
                 addOperand(out, module, cc->getAggregateElement(i));
                 out << "; ";
             }
-            out << "}:" << getWhy3FullName(operand->getType()) << ")";
+            out << "}";
         } else if (isa<ConstantAggregateZero>(operand)) {
             if (operand->getType()->isArrayTy()) {
                 Constant* value = cast<ConstantAggregateZero>(operand)->getSequentialElement();
