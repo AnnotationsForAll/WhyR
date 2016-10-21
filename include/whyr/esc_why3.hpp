@@ -1,5 +1,5 @@
 /*
- * model.hpp
+ * esc_why3.hpp
  *
  *  Created on: Sep 15, 2016
  *      Author: jrobbins
@@ -44,6 +44,8 @@ namespace whyr {
         unordered_set<Type*> floatTypes;
         /// All the array types used.
         unordered_set<ArrayType*> arrayTypes;
+        /// All the struct types used.
+        unordered_set<StructType*> structTypes;
         /// All the functions called by other functions.
         unordered_set<Function*> funcsCalled;
         /// All the globals used by other functions.
@@ -152,6 +154,12 @@ namespace whyr {
      * Returns the constant name of a global variable.
      */
     string getWhy3GlobalName(GlobalValue* global);
+    /**
+     * Returns the name of a field in a struct.
+     * Be sure to add the preceding '.' before adding this to the output stream!
+     * This function requires the module, because it might rely on debug info to make names.
+     */
+    string getWhy3StructFieldName(AnnotatedModule* module, StructType* type, unsigned index);
     
     /*
      * 
@@ -244,6 +252,14 @@ namespace whyr {
      * Adds a theory for an array type.
      */
     void addArrayType(ostream &out, AnnotatedModule* module, ArrayType* type);
+    /**
+     * Adds the base theory for all struct types.
+     */
+    void addCommonStructType(ostream &out, AnnotatedModule* module);
+    /**
+     * Adds a theory for a struct type.
+     */
+    void addStructType(ostream &out, AnnotatedModule* module, StructType* type);
     /**
      * Adds a theory for a derived type.
      * This function calls addArrayType, addPtrType, etc.

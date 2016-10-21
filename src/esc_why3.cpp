@@ -31,6 +31,11 @@ namespace whyr {
         } else if (type->isArrayTy()) {
             info.arrayTypes.insert(cast<ArrayType>(type));
             getTypeInfo(info, type->getArrayElementType());
+        } else if (type->isStructTy()) {
+            info.structTypes.insert(cast<StructType>(type));
+            for (unsigned i = 0; i < type->getStructNumElements(); i++) {
+                getTypeInfo(info, type->getStructElementType(i));
+            }
         } else if (type->isVoidTy() || type->isLabelTy()) {
             // do nothing
         } else {
@@ -265,6 +270,17 @@ namespace whyr {
             return "Double";
         } else if (type->isArrayTy()) {
             return "Array" + getWhy3TheoryName(type->getArrayElementType()) + "_" + to_string(type->getArrayNumElements()); 
+        } else if (type->isStructTy()) {
+            if (type->getStructName().empty()) {
+                ostringstream name;
+                name << "Struct";
+                for (unsigned i = 0; i < type->getStructNumElements(); i++) {
+                    name << "_" << getWhy3TheoryName(type->getStructElementType(i));
+                }
+                return name.str();
+            } else {
+                return "Type_" + getWhy3SafeName(string(type->getStructName().data()));
+            }
         } else {
             throw llvm_exception("Unknown type in LLVM input");
         }
@@ -281,6 +297,17 @@ namespace whyr {
             return "double";
         } else if (type->isArrayTy()) {
             return "a" + getWhy3TypeName(type->getArrayElementType()) + "_" + to_string(type->getArrayNumElements());
+        } else if (type->isStructTy()) {
+            if (type->getStructName().empty()) {
+                ostringstream name;
+                name << "struct";
+                for (unsigned i = 0; i < type->getStructNumElements(); i++) {
+                    name << "_" << getWhy3TypeName(type->getStructElementType(i));
+                }
+                return name.str();
+            } else {
+                return "type_" + getWhy3SafeName(string(type->getStructName().data()));
+            }
         } else {
             throw llvm_exception("Unknown type in LLVM input");
         }
@@ -368,6 +395,10 @@ namespace whyr {
     
     string getWhy3GlobalName(GlobalValue* global) {
         return string("global_") + getWhy3SafeName(global->getName().data());
+    }
+    
+    string getWhy3StructFieldName(AnnotatedModule* module, StructType* type, unsigned index) {
+        return "field_" + to_string(index);
     }
     
     // ABOUT CustomTruncate BELOW:
@@ -507,6 +538,15 @@ end
                 addOperand(out, module, cc->getElementAsConstant(i), func);
                 out << "]";
             }
+        } else if (isa<ConstantStruct>(operand)) {
+            ConstantStruct* cc = cast<ConstantStruct>(operand);
+            out << "({ ";
+            for (unsigned i = 0; i < operand->getType()->getStructNumElements(); i++) {
+                out << getWhy3TheoryName(operand->getType()) << "." << getWhy3StructFieldName(module, cc->getType(), i) << " = ";
+                addOperand(out, module, cc->getAggregateElement(i));
+                out << "; ";
+            }
+            out << "}:" << getWhy3FullName(operand->getType()) << ")";
         } else if (isa<ConstantAggregateZero>(operand)) {
             if (operand->getType()->isArrayTy()) {
                 Constant* value = cast<ConstantAggregateZero>(operand)->getSequentialElement();
@@ -517,6 +557,15 @@ end
                     addOperand(out, module, value, func);
                     out << "]";
                 }
+            } else if (operand->getType()->isStructTy()) {
+                ConstantAggregateZero* cc = cast<ConstantAggregateZero>(operand);
+                out << "{ ";
+                for (unsigned i = 0; i < operand->getType()->getStructNumElements(); i++) {
+                    out << getWhy3TheoryName(operand->getType()) << "." << getWhy3StructFieldName(module, cast<StructType>(operand->getType()), i) << " = ";
+                    addOperand(out, module, cc->getStructElement(i));
+                    out << "; ";
+                }
+                out << "}";
             } else {
                 throw type_exception("Instantiation of aggregate zero of type '" + LogicTypeLLVM(operand->getType()).toString() + "' currently unsupported");
             }
@@ -1786,11 +1835,39 @@ end
         out << "end" << endl << endl;
     }
     
+    void addCommonStructType(ostream &out, AnnotatedModule* module) {
+        // do nothing. Currently, no memory models require we have any common code.
+    }
+    
+    void addStructType(ostream &out, AnnotatedModule* module, StructType* type) {
+        // find the imports we need
+        unordered_set<Type*> imports;
+        for (unsigned i = 0; i < type->getStructNumElements(); i++) {
+            imports.insert(type->getStructElementType(i));
+        }
+        
+        // add the theory
+        out << "theory " << getWhy3TheoryName(type) << endl;
+        for (unordered_set<Type*>::iterator ii = imports.begin(); ii != imports.end(); ii++) {
+            out << "    use import " << getWhy3TheoryName(*ii) << endl;
+        }
+        out << "    constant size : int = " << module->rawIR()->getDataLayout().getStructLayout(type)->getSizeInBits() << endl;
+        out << "    type " << getWhy3TypeName(type) << " = {" << endl;
+        for (unsigned i = 0; i < type->getStructNumElements(); i++) {
+            Type* elem = type->getStructElementType(i);
+            out << "        " << getWhy3StructFieldName(module, type, i) << " : " << getWhy3FullName(elem) << ";" << endl;
+        }
+        out << "    }" << endl;
+        out << "end" << endl << endl;
+    }
+    
     void addDerivedType(ostream &out, AnnotatedModule* module, Type* type) {
         if (type->isPointerTy()) {
             addPtrType(out, module, cast<PointerType>(type));
         } else if (type->isArrayTy()) {
             addArrayType(out, module, cast<ArrayType>(type));
+        } else if (type->isStructTy()) {
+            addStructType(out, module, cast<StructType>(type));
         }
     }
     
@@ -1987,6 +2064,7 @@ end
         unordered_set<Type*> notSeen;
         notSeen.insert(info.ptrTypes.begin(), info.ptrTypes.end());
         notSeen.insert(info.arrayTypes.begin(), info.arrayTypes.end());
+        notSeen.insert(info.structTypes.begin(), info.structTypes.end());
         
         // while there's still more nodes in need of calculation; that is, if the state changed since last iteration...
         bool changed;
@@ -2005,6 +2083,13 @@ end
                 } else if ((*ii)->isArrayTy()) {
                     if (notSeen.find((*ii)->getArrayElementType()) != notSeen.end()) {
                         allSeen = false;
+                    }
+                } else if ((*ii)->isStructTy()) {
+                    for (unsigned i = 0; i < (*ii)->getStructNumElements(); i++) {
+                        if (notSeen.find((*ii)->getStructElementType(i)) != notSeen.end()) {
+                            allSeen = false;
+                            break;
+                        }
                     }
                 }
                 
@@ -2133,6 +2218,10 @@ end
         
         if (!info.arrayTypes.empty()) {
             addCommonArrayType(out, module);
+        }
+        
+        if (!info.structTypes.empty()) {
+            addCommonStructType(out, module);
         }
         
         list<Type*> types;
