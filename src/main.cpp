@@ -32,6 +32,7 @@ static option::ArgStatus requireArgument(const option::Option& option, bool msg)
 enum Options {
     UNKNOWN,
     HELP,
+    VERSION,
     OUTPUT,
     WHY3_INT_MODE,
     WHY3_FLOAT_MODE,
@@ -46,6 +47,7 @@ static const option::Descriptor usage[] = {
     { UNKNOWN, 0, "", "", option::Arg::None,                    "USAGE: whyr [<option>...] <file>" },
     { UNKNOWN, 0, "", "", option::Arg::None,                    "OPTIONS:" },
     { HELP, 0, "h", "help", option::Arg::None,                  "    --help (-h)          - Prints this help information." },
+    { VERSION, 0, "v", "version", option::Arg::None,            "    --version (-v)       - Prints version information and exits." },
     { OUTPUT, 0, "o", "output-file", requireArgument,           "    --output-file (-o)   - Send output to the given file." },
     { WHY3_INT_MODE, 0, "", "why3-ints", requireArgument,       "    --why3-ints          - Change how LLVM integers are modeled in Why3." },
     { UNKNOWN, 0, "", "", option::Arg::None,                    "                           Valid values: 'int', 'bv'" },
@@ -74,6 +76,12 @@ int main(int argc, char** argv) {
     
     if (options[HELP] || argc == 0) {
         option::printUsage(std::cout, usage);
+        return 0;
+    }
+    
+    if (options[VERSION]) {
+        std::cout << "WhyR (version " << WHYR_VERSION << ")" << std::endl;
+        std::cout << "https://github.com/AnnotationsForAll/WhyR" << std::endl;
         return 0;
     }
     
