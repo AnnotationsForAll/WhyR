@@ -82,7 +82,7 @@ RELEASE_OPTIONS = -O3
 
 build_release: Release/$(EXE_NAME)
 
-Release$(EXE_NAME): Release $(RELEASE_O_FILES)
+Release/$(EXE_NAME): Release $(RELEASE_O_FILES)
 	$(CXX) $(CXXFLAGS) $(OPTIONS) $(RELEASE_OPTIONS) $(RELEASE_O_FILES) -o $@ $(LIBS)
 
 $(RELEASE_O_FILES): Release/%.o: src/%.cpp $(H_FILES) optionparser.h
