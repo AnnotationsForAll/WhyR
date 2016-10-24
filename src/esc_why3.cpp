@@ -271,7 +271,7 @@ namespace whyr {
         } else if (type->isArrayTy()) {
             return "Array" + getWhy3TheoryName(type->getArrayElementType()) + "_" + to_string(type->getArrayNumElements()); 
         } else if (type->isStructTy()) {
-            if (type->getStructName().empty()) {
+            if (cast<StructType>(type)->isLiteral()) {
                 ostringstream name;
                 name << "Struct";
                 for (unsigned i = 0; i < type->getStructNumElements(); i++) {
@@ -298,7 +298,7 @@ namespace whyr {
         } else if (type->isArrayTy()) {
             return "a" + getWhy3TypeName(type->getArrayElementType()) + "_" + to_string(type->getArrayNumElements());
         } else if (type->isStructTy()) {
-            if (type->getStructName().empty()) {
+            if (cast<StructType>(type)->isLiteral()) {
                 ostringstream name;
                 name << "struct";
                 for (unsigned i = 0; i < type->getStructNumElements(); i++) {
