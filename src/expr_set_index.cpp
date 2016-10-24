@@ -52,7 +52,7 @@ namespace whyr {
         value->checkTypes();
         
         // lhs has to be indexable
-        if (!isa<LogicTypeLLVM>(lhs->returnType()) || !cast<LogicTypeLLVM>(lhs->returnType())->getType()->isArrayTy()) {
+        if (!isa<LogicTypeLLVM>(lhs->returnType()) || !(cast<LogicTypeLLVM>(lhs->returnType())->getType()->isArrayTy() || cast<LogicTypeLLVM>(lhs->returnType())->getType()->isStructTy())) {
             throw type_exception("Operator 'set' expected aggregate type; got type '" + lhs->returnType()->toString() + "'", this);
         }
         
@@ -67,15 +67,38 @@ namespace whyr {
                 throw type_exception("Operator 'set' expected value type compatible with '" + lhs->returnType()->toString() + "'; got type '" + value->returnType()->toString() + "'", this);
             }
         }
+        
+        // if we are an struct type, rhs must be a logical int CONSTANT, and value must be the element's type
+        if (isa<LogicTypeLLVM>(lhs->returnType()) && cast<LogicTypeLLVM>(lhs->returnType())->getType()->isStructTy()) {
+            if (!isa<LogicExpressionIntegerConstant>(rhs)) {
+                throw type_exception("Operator 'set' expected struct index constant of type 'int'; got '" + rhs->toString() + "'", this);
+            }
+            
+            unsigned index = stoul(cast<LogicExpressionIntegerConstant>(rhs)->getValue());
+            Type* elemType = cast<LogicTypeLLVM>(lhs->returnType())->getType()->getStructElementType(index);
+            if (!isa<LogicTypeLLVM>(value->returnType()) || cast<LogicTypeLLVM>(value->returnType())->getType() != elemType) {
+                throw type_exception("Operator 'set' expected value type compatible with '" + lhs->returnType()->toString() + "'; got type '" + value->returnType()->toString() + "'", this);
+            }
+        }
     }
     
     void LogicExpressionSetIndex::toWhy3(ostream &out, Why3Data &data) {
-        lhs->toWhy3(out, data);
-        out << "[";
-        rhs->toWhy3(out, data);
-        out << " <- ";
-        value->toWhy3(out, data);
-        out << "]";
+        if (isa<LogicTypeLLVM>(lhs->returnType()) && cast<LogicTypeLLVM>(lhs->returnType())->getType()->isArrayTy()) {
+            lhs->toWhy3(out, data);
+            out << "[";
+            rhs->toWhy3(out, data);
+            out << " <- ";
+            value->toWhy3(out, data);
+            out << "]";
+        } else if (isa<LogicTypeLLVM>(lhs->returnType()) && cast<LogicTypeLLVM>(lhs->returnType())->getType()->isStructTy()) {
+            out << "{";
+            lhs->toWhy3(out, data);
+            unsigned index = stoul(cast<LogicExpressionIntegerConstant>(rhs)->getValue());
+            out << " with " << getWhy3StructFieldName(data.module, cast<StructType>(cast<LogicTypeLLVM>(lhs->returnType())->getType()), index);
+            out << " = ";
+            value->toWhy3(out, data);
+            out << ";}";
+        }
     }
     
     bool LogicExpressionSetIndex::classof(const LogicExpression* expr) {

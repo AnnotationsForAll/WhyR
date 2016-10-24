@@ -23,7 +23,7 @@ namespace whyr {
         // we have to type check up here because the retType depends on it
         
         // lhs has to be indexable
-        if (!isa<LogicTypeLLVM>(lhs->returnType()) || !(cast<LogicTypeLLVM>(lhs->returnType())->getType()->isArrayTy() || cast<LogicTypeLLVM>(lhs->returnType())->getType()->isPointerTy())) {
+        if (!isa<LogicTypeLLVM>(lhs->returnType()) || !(cast<LogicTypeLLVM>(lhs->returnType())->getType()->isArrayTy() || cast<LogicTypeLLVM>(lhs->returnType())->getType()->isStructTy() || cast<LogicTypeLLVM>(lhs->returnType())->getType()->isPointerTy())) {
             throw type_exception("Operator 'get' expected indexable type; got type '" + lhs->returnType()->toString() + "'", this);
         }
         
@@ -33,6 +33,16 @@ namespace whyr {
                 throw type_exception("Operator 'get' expected index type of 'int'; got type '" + rhs->returnType()->toString() + "'", this);
             } else {
                 retType = new LogicTypeLLVM(cast<LogicTypeLLVM>(lhs->returnType())->getType()->getArrayElementType(), source);
+            }
+        }
+        
+        // if we are an struct type, rhs must be a logical int CONSTANT
+        if (isa<LogicTypeLLVM>(lhs->returnType()) && cast<LogicTypeLLVM>(lhs->returnType())->getType()->isStructTy()) {
+            if (!isa<LogicExpressionIntegerConstant>(rhs)) {
+                throw type_exception("Operator 'get' expected struct index constant of type 'int'; got '" + rhs->toString() + "'", this);
+            } else {
+                unsigned index = stoul(cast<LogicExpressionIntegerConstant>(rhs)->getValue());
+                retType = new LogicTypeLLVM(cast<LogicTypeLLVM>(lhs->returnType())->getType()->getStructElementType(index), source);
             }
         }
         
@@ -78,6 +88,10 @@ namespace whyr {
             out << "[";
             rhs->toWhy3(out, data);
             out << "]";
+        }  else if (isa<LogicTypeLLVM>(lhs->returnType()) && cast<LogicTypeLLVM>(lhs->returnType())->getType()->isStructTy()) {
+            lhs->toWhy3(out, data);
+            unsigned index = stoul(cast<LogicExpressionIntegerConstant>(rhs)->getValue());
+            out << "." << getWhy3StructFieldName(data.module, cast<StructType>(cast<LogicTypeLLVM>(lhs->returnType())->getType()), index);
         } else if (isa<LogicTypeLLVM>(lhs->returnType()) && cast<LogicTypeLLVM>(lhs->returnType())->getType()->isPointerTy()) {
             out << "(" << getWhy3TheoryName(cast<LogicTypeLLVM>(lhs->returnType())->getType()) << ".load " << data.statepoint << " ";
             out << "(" << getWhy3TheoryName(cast<LogicTypeLLVM>(lhs->returnType())->getType()) << ".offset_pointer ";

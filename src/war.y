@@ -1,10 +1,11 @@
 %token TOKEN_VAR TOKEN_VAR_EXT TOKEN_INT TOKEN_REAL TOKEN_WORD
 %token TOKEN_TRUE TOKEN_FALSE TOKEN_FORALL TOKEN_EXISTS TOKEN_LET TOKEN_RESULT TOKEN_ZEXT TOKEN_SEXT TOKEN_NULL TOKEN_MIN TOKEN_MAX TOKEN_BADDR
-%token TOKEN_TYPE_LLVM_INT TOKEN_TYPE_INT TOKEN_TYPE_BOOL TOKEN_TYPE_REAL TOKEN_TYPE_LLVM_FLOAT TOKEN_TYPE_LLVM_DOUBLE
+%token TOKEN_TYPE_LLVM_INT TOKEN_TYPE_INT TOKEN_TYPE_BOOL TOKEN_TYPE_REAL TOKEN_TYPE_LLVM_FLOAT TOKEN_TYPE_LLVM_DOUBLE TOKEN_TYPE_STRUCT
 %token TOKEN_OP_IMP TOKEN_OP_BIDIR_IMP TOKEN_OP_AND TOKEN_OP_OR TOKEN_OP_EQ TOKEN_OP_NEQ TOKEN_OP_GE TOKEN_OP_LE
 %token TOKEN_OP_SDIV TOKEN_OP_UDIV TOKEN_OP_REM TOKEN_OP_SREM TOKEN_OP_UREM TOKEN_OP_MOD TOKEN_OP_SMOD TOKEN_OP_UMOD TOKEN_OP_LSHL TOKEN_OP_LSHR TOKEN_OP_ASHR
 %token TOKEN_OP_UGT TOKEN_OP_UGE TOKEN_OP_ULT TOKEN_OP_ULE TOKEN_OP_SGT TOKEN_OP_SGE TOKEN_OP_SLT TOKEN_OP_SLE
 %token TOKEN_OP_FOEQ TOKEN_OP_FOGT TOKEN_OP_FOGE TOKEN_OP_FOLT TOKEN_OP_FOLE TOKEN_OP_FONE TOKEN_OP_FORD TOKEN_OP_FUEQ TOKEN_OP_FUGT TOKEN_OP_FUGE TOKEN_OP_FULT TOKEN_OP_FULE TOKEN_OP_FUNE TOKEN_OP_FUNO
+%token TOKEN_PACKED_STRUCT_BEGIN TOKEN_PACKED_STRUCT_END
 %token PREC_CAST PREC_QUANT PREC_LET PREC_UMINUS PREC_REF PREC_DEREF
 
 %left ','
@@ -49,6 +50,10 @@ var_name:
       TOKEN_VAR                                     { $$ = war_parse_var($1); }
     | TOKEN_VAR_EXT                                 { $$ = war_parse_var_ext($1); }
     ;
+type_list:
+      typeid                                        { $$ = war_init_array_item($1); }
+    | type_list ',' typeid                          { $$ = war_extend_array_item($1, $3); }
+    ;
 typeid:
       TOKEN_TYPE_LLVM_INT                           { $$ = war_parse_llvm_int_type($1); }
     | TOKEN_TYPE_INT                                { $$ = war_parse_int_type(); }
@@ -59,6 +64,10 @@ typeid:
     | typeid '*'                                    { $$ = war_parse_llvm_ptr_type($1); }
     | typeid '[' TOKEN_INT ']'                      { $$ = war_parse_llvm_array_type($1, $3); }
     | typeid '[' ']'                                { $$ = war_parse_llvm_array_0_type($1); }
+    | TOKEN_TYPE_STRUCT TOKEN_WORD                  { $$ = war_parse_struct_type($2); }
+    | TOKEN_TYPE_STRUCT '{' type_list '}'           { $$ = war_parse_anon_struct_type(false, $3); }
+    | TOKEN_TYPE_STRUCT TOKEN_PACKED_STRUCT_BEGIN type_list TOKEN_PACKED_STRUCT_END
+                                                    { $$ = war_parse_anon_struct_type(true , $3); }
     ;
 cast:
       '(' typeid ')' expr                           %prec PREC_CAST
@@ -79,6 +88,9 @@ cast:
                                                     { $$ = war_parse_spec_llvm_const(false, '<', $2); }
     | '(' typeid TOKEN_SEXT ')' TOKEN_MAX           %prec PREC_CAST
                                                     { $$ = war_parse_spec_llvm_const(false, '>', $2); }
+    | '(' typeid ')' TOKEN_TYPE_STRUCT '{' array_item '}'
+                                                    %prec PREC_CAST
+                                                    { $$ = war_parse_struct_const($2, $6); }
     ;
 declare_item:
         typeid TOKEN_VAR                            { $$ = war_parse_decl_item($1, $2); }

@@ -780,6 +780,26 @@ namespace whyr {
         }
     };
     
+    class ParserStructConst : public ExpressionParser {
+    public:
+        LogicExpression* parse(const char* exprName, MDNode* node, NodeSource* source) {
+            requireMinArgs(node, exprName, source, 1);
+            
+            LogicExpression* baseTypeExpr = ExpressionParser::parseMetadata(node->getOperand(1).get(), source);
+            if (!isa<LogicTypeType>(baseTypeExpr->returnType())) {
+                throw type_exception(("Argument 1 to 'struct' must be of type 'type', got type '" + baseTypeExpr->returnType()->toString() + "'"), NULL, source);
+            }
+            LogicType* baseTypeRaw = cast<LogicTypeType>(baseTypeExpr->returnType())->getType();
+            
+            list<LogicExpression*>* elems = new list<LogicExpression*>();
+            for (unsigned i = 2; i < node->getNumOperands(); i++) {
+                elems->push_back(parseMetadata(node->getOperand(i).get(), source));
+            }
+            
+            return new LogicExpressionLLVMStructConstant(baseTypeRaw, elems, source);
+        }
+    };
+    
     /* ==========================
      * PARSER REGISTRY DATA TABLE
      * ==========================
@@ -879,6 +899,7 @@ namespace whyr {
         {"maxuint",new ParserSpecLLVMConst(LogicExpressionSpecialLLVMConstant::OP_MAXUINT)},
         {"minuint",new ParserSpecLLVMConst(LogicExpressionSpecialLLVMConstant::OP_MINUINT)},
         {"blockaddress",new ParserBaddr()},
+        {"struct",new ParserStructConst()},
     });
     map<string,ExpressionParser*>* ExpressionParser::getExpressionParsers() {
         return &parsers;

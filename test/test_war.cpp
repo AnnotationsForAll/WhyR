@@ -165,4 +165,9 @@ INSTANTIATE_TEST_CASE_P(,WarTests,(setup(), ::testing::ValuesIn((WarTestData[]){
     {"(i32 sext) min", new whyr::LogicTypeLLVM(llvm::Type::getIntNTy(*ctx,32))},
     {"label: true", new whyr::LogicTypeBool()},
     {"label: true ? false : true", new whyr::LogicTypeBool()},
+    {"(struct {i32,i32}) struct {(i32)1,(i32)2}", new whyr::LogicTypeLLVM(llvm::StructType::get(llvm::Type::getIntNTy(*ctx,32), llvm::Type::getIntNTy(*ctx,32), NULL))},
+    {"(struct {i32,i16,float}) struct {(i32)1,(i16)2,(float)1.0}", new whyr::LogicTypeLLVM(llvm::StructType::get(llvm::Type::getIntNTy(*ctx,32), llvm::Type::getIntNTy(*ctx,16), llvm::Type::getFloatTy(*ctx), NULL))},
+    {"(struct {i32}) struct {(i32)1+(i32)2}", new whyr::LogicTypeLLVM(llvm::StructType::get(llvm::Type::getIntNTy(*ctx,32), NULL))},
+    {"((struct {i32}) struct {(i32)1})[0]", new whyr::LogicTypeLLVM(llvm::Type::getIntNTy(*ctx,32))},
+    {"((struct {i32}) struct {(i32)1})[0 = (i32)0]", new whyr::LogicTypeLLVM(llvm::StructType::get(llvm::Type::getIntNTy(*ctx,32), NULL))},
 })));

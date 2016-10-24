@@ -40,6 +40,7 @@ static std::unordered_set<std::string> files_to_prove({
     "store.bc",
     "array_types.bc",
     "ins_ex_arrays.bc",
+    "ins_ex_structs.bc",
     "indirectbr.bc",
 });
 

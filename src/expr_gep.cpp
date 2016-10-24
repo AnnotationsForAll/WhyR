@@ -18,6 +18,16 @@ namespace whyr {
     using namespace std;
     using namespace llvm;
     
+    static unsigned getIntConstValue(LogicExpression* expr) {
+        if (isa<LogicExpressionIntegerConstant>(expr)) {
+            return stoul(cast<LogicExpressionIntegerConstant>(expr)->getValue());
+        } else if (isa<LogicExpressionLLVMConstant>(expr) && isa<ConstantInt>(cast<LogicExpressionLLVMConstant>(expr)->getValue())) {
+            return cast<ConstantInt>(cast<LogicExpressionLLVMConstant>(expr)->getValue())->getLimitedValue();
+        } else {
+            throw whyr_exception("Internal error: expr is not an integernal constant", expr);
+        }
+    }
+    
     static const int classID = LOGIC_EXPR_GEP;
     LogicExpressionGetElementPointer::LogicExpressionGetElementPointer(LogicExpression* expr, list<LogicExpression*>* elements, NodeSource* source) : LogicExpression(source), expr{expr}, elements{elements} {
         id = classID;
@@ -49,6 +59,14 @@ namespace whyr {
                     throw type_exception("Type '" + LogicTypeLLVM(type, source).toString() + "' cannot be indexed with type '" + (*ii)->returnType()->toString() + "'; must be an intergernal type", this);
                 }
                 type = type->getArrayElementType();
+            } else if (type->isStructTy()) {
+                // type of index has to be an integernal CONSTANT
+                if (isa<LogicExpressionIntegerConstant>(expr) || (isa<LogicExpressionLLVMConstant>(expr) && isa<ConstantInt>(cast<LogicExpressionLLVMConstant>(expr)->getValue()))) {
+                    unsigned index = getIntConstValue(*ii);
+                    type = type->getStructElementType(index);
+                } else {
+                    throw type_exception("Type '" + LogicTypeLLVM(type, source).toString() + "' cannot be indexed with type '" + (*ii)->returnType()->toString() + "'; must be an intergernal constant", this);
+                }
             } else {
                 // type cannot be indexed
                 throw type_exception("Type '" + LogicTypeLLVM(type, source).toString() + "' cannot be indexed by 'getelementptr'", this);
@@ -127,6 +145,11 @@ namespace whyr {
                 }
                 out << ")";
                 currentType = currentType->getArrayElementType();
+            } else if (currentType->isStructTy()) {
+                unsigned index = getIntConstValue(*ii);
+                unsigned offset = data.module->rawIR()->getDataLayout().getStructLayout(cast<StructType>(currentType))->getElementOffsetInBits(index);
+                out << offset;
+                currentType = currentType->getStructElementType(index);
             }
         }
         out << "))):(" << getWhy3FullName(cast<LogicTypeLLVM>(retType)->getType()) << "))";

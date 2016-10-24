@@ -39,7 +39,7 @@ namespace whyr {
     class whyr_exception; class whyr_warning;
     
     /// This is the WhyR version string. Update it for new releases.
-    #define WHYR_VERSION "0.1.0"
+    #define WHYR_VERSION "0.2.0"
     
     /**
      * This structure keeps track of all the WhyR configuration settings.

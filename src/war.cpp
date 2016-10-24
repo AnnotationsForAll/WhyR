@@ -1005,6 +1005,52 @@ WarNode war_parse_baddr_ext(WarNode funcNode, WarNode blockNode) {
     return war_parse_baddr(funcNode, blockNode);
 }
 
+WarNode war_parse_struct_type(WarNode node) {
+    using namespace std; using namespace llvm; using namespace whyr;
+    
+    // find the type it corresponds to
+    StructType* type = warParserSource->func->getModule()->rawIR()->getTypeByName(StringRef(node.token));
+    if (!type) {
+        throw syntax_exception("Type '%" + string(node.token) + "' could not be found", NULL, warParserSource);
+    }
+    
+    // return struct type
+    WarNode ret;
+    ret.expr = new LogicExpressionConstantType(new LogicTypeType(new LogicTypeLLVM(type, warParserSource), warParserSource), warParserSource);
+    return ret;
+}
+
+WarNode war_parse_anon_struct_type(bool packed, WarNode node) {
+    using namespace std; using namespace llvm; using namespace whyr;
+    
+    Type* types[node.exprs->size()]; int i = 0;
+    for (list<LogicExpression*>::iterator ii = node.exprs->begin(); ii != node.exprs->end(); ii++) {
+        LogicType* logicType = cast<LogicTypeType>((*ii)->returnType())->getType();
+        if (!isa<LogicTypeLLVM>(logicType)) {
+            throw type_exception("Struct types must be made of LLVM types; got a member of type '" + logicType->toString() + "'", NULL, warParserSource);
+        }
+        Type* baseType = cast<LogicTypeLLVM>(logicType)->getType();
+        types[i] = baseType;
+        
+        i++;
+    }
+    
+    StructType* type = StructType::get(warParserSource->func->rawIR()->getContext(), ArrayRef<Type*>(types, node.exprs->size()), packed);
+    WarNode ret;
+    ret.expr = new LogicExpressionConstantType(new LogicTypeType(new LogicTypeLLVM(type, warParserSource), warParserSource), warParserSource);
+    return ret;
+}
+
+WarNode war_parse_struct_const(WarNode typeNode, WarNode listNode) {
+    using namespace std; using namespace llvm; using namespace whyr;
+    
+    LogicType* logicType = cast<LogicTypeType>(typeNode.expr->returnType())->getType();
+    
+    WarNode ret;
+    ret.expr = new LogicExpressionLLVMStructConstant(logicType, listNode.exprs, warParserSource);
+    return ret;
+}
+
 // ================================
 // End of parser functions.
 // ================================

@@ -69,6 +69,7 @@ namespace whyr {
         LOGIC_EXPR_OPERAND,
         LOGIC_EXPR_SPECIAL_LLVM_CONST,
         LOGIC_EXPR_BADDR,
+        LOGIC_EXPR_LLVM_STRUCT_CONST,
     };
     
     /**
@@ -1065,6 +1066,26 @@ namespace whyr {
         BasicBlock* getBlock();
         
         virtual ~LogicExpressionBlockAddress();
+        virtual string toString();
+        virtual LogicType* returnType();
+        virtual void checkTypes();
+        virtual void toWhy3(ostream &out, Why3Data &data);
+        
+        static bool classof(const LogicExpression* expr);
+    };
+    
+    /**
+     * This constructs an LLVM struct out of potentially logical intermediate values.
+     */
+    class LogicExpressionLLVMStructConstant : public LogicExpression {
+    protected:
+        list<LogicExpression*>* elements;
+        LogicType* retType;
+    public:
+        LogicExpressionLLVMStructConstant(LogicType* type, list<LogicExpression*>* elements, NodeSource* source = NULL);
+        list<LogicExpression*>* getElems();
+        
+        virtual ~LogicExpressionLLVMStructConstant();
         virtual string toString();
         virtual LogicType* returnType();
         virtual void checkTypes();
