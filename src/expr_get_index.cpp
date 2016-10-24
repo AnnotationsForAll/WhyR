@@ -89,9 +89,9 @@ namespace whyr {
             rhs->toWhy3(out, data);
             out << "]";
         }  else if (isa<LogicTypeLLVM>(lhs->returnType()) && cast<LogicTypeLLVM>(lhs->returnType())->getType()->isStructTy()) {
-            out << "." << getWhy3TheoryName(cast<LogicTypeLLVM>(lhs->returnType())->getType());
+            lhs->toWhy3(out, data);
             unsigned index = stoul(cast<LogicExpressionIntegerConstant>(rhs)->getValue());
-            out << getWhy3StructFieldName(data.module, cast<StructType>(cast<LogicTypeLLVM>(lhs->returnType())->getType()), index);
+            out << "." << getWhy3StructFieldName(data.module, cast<StructType>(cast<LogicTypeLLVM>(lhs->returnType())->getType()), index);
         } else if (isa<LogicTypeLLVM>(lhs->returnType()) && cast<LogicTypeLLVM>(lhs->returnType())->getType()->isPointerTy()) {
             out << "(" << getWhy3TheoryName(cast<LogicTypeLLVM>(lhs->returnType())->getType()) << ".load " << data.statepoint << " ";
             out << "(" << getWhy3TheoryName(cast<LogicTypeLLVM>(lhs->returnType())->getType()) << ".offset_pointer ";
