@@ -88,6 +88,9 @@ cast:
                                                     { $$ = war_parse_spec_llvm_const(false, '<', $2); }
     | '(' typeid TOKEN_SEXT ')' TOKEN_MAX           %prec PREC_CAST
                                                     { $$ = war_parse_spec_llvm_const(false, '>', $2); }
+    | '(' typeid ')' TOKEN_TYPE_STRUCT '{' array_item '}'
+                                                    %prec PREC_CAST
+                                                    { $$ = war_parse_struct_const($2, $6); }
     ;
 declare_item:
         typeid TOKEN_VAR                            { $$ = war_parse_decl_item($1, $2); }

@@ -95,4 +95,7 @@ INSTANTIATE_TEST_CASE_P(,WarFailureTests,(setup(), ::testing::ValuesIn((std::str
     "blockaddress(42, %label)",
     "label: ",
     "label: label: true",
+    "struct {(i32)4}",
+    "(struct {i32}) struct {4}",
+    "(struct {i32}) struct {(i32)1, (i32)2}",
 })));
