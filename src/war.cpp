@@ -1045,37 +1045,9 @@ WarNode war_parse_struct_const(WarNode typeNode, WarNode listNode) {
     using namespace std; using namespace llvm; using namespace whyr;
     
     LogicType* logicType = cast<LogicTypeType>(typeNode.expr->returnType())->getType();
-    if (!isa<LogicTypeLLVM>(logicType)) {
-        throw type_exception("Struct constants must be cast to struct type; got type '" + logicType->toString() + "'", NULL, warParserSource);
-    }
-    
-    Type* type = cast<LogicTypeLLVM>(logicType)->getType();
-    if (!type->isStructTy()) {
-        throw type_exception("Struct constants must be cast to struct type; got type '" + logicType->toString() + "'", NULL, warParserSource);
-    }
-    
-    if (listNode.exprs->size() != type->getStructNumElements()) {
-        throw type_exception("Struct type '" + logicType->toString() + "' has " + to_string(type->getStructNumElements()) + " elements; got " + to_string(listNode.exprs->size()), NULL, warParserSource);
-    }
-    
-    Constant* items[listNode.exprs->size()];
-    int i = 0;
-    for (list<LogicExpression*>::iterator ii = listNode.exprs->begin(); ii != listNode.exprs->end(); ii++) {
-        if (!isa<LogicExpressionLLVMConstant>(*ii)) {
-            throw type_exception("Expected item " + to_string(i) + " to be of type '" + LogicTypeLLVM(type->getStructElementType(i)).toString() + "'; got type '" + (*ii)->returnType()->toString() + "'", NULL, warParserSource);
-        }
-        items[i] = cast<LogicExpressionLLVMConstant>(*ii)->getValue();
-        if (items[i]->getType() != type->getStructElementType(i)) {
-            throw type_exception("Expected item " + to_string(i) + " to be of type '" + LogicTypeLLVM(type->getStructElementType(i)).toString() + "'; got type '" + (*ii)->returnType()->toString() + "'", NULL, warParserSource);
-        }
-        i++;
-    }
-    
-    StructType* structType = cast<StructType>(type);
-    Constant* llvm = ConstantStruct::get(structType, ArrayRef<Constant*>(items, listNode.exprs->size()));
     
     WarNode ret;
-    ret.expr = new LogicExpressionLLVMConstant(llvm, warParserSource);
+    ret.expr = new LogicExpressionLLVMStructConstant(logicType, listNode.exprs, warParserSource);
     return ret;
 }
 
