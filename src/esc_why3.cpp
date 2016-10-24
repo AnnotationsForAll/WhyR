@@ -274,12 +274,15 @@ namespace whyr {
             if (cast<StructType>(type)->isLiteral()) {
                 ostringstream name;
                 name << "Struct";
+                if (cast<StructType>(type)->isPacked()) {
+                    name << "Packed";
+                }
                 for (unsigned i = 0; i < type->getStructNumElements(); i++) {
                     name << "_" << getWhy3TheoryName(type->getStructElementType(i));
                 }
                 return name.str();
             } else {
-                return "Type_" + (cast<StructType>(type)->isPacked() ? string("Packed_") : string()) + getWhy3SafeName(string(type->getStructName().data()));
+                return "Type_" + getWhy3SafeName(string(type->getStructName().data()));
             }
         } else {
             throw llvm_exception("Unknown type in LLVM input");
@@ -301,12 +304,15 @@ namespace whyr {
             if (cast<StructType>(type)->isLiteral()) {
                 ostringstream name;
                 name << "struct";
+                if (cast<StructType>(type)->isPacked()) {
+                    name << "_packed";
+                }
                 for (unsigned i = 0; i < type->getStructNumElements(); i++) {
                     name << "_" << getWhy3TypeName(type->getStructElementType(i));
                 }
                 return name.str();
             } else {
-                return "type_" + (cast<StructType>(type)->isPacked() ? string("packed_") : string()) + getWhy3SafeName(string(type->getStructName().data()));
+                return "type_" + getWhy3SafeName(string(type->getStructName().data()));
             }
         } else {
             throw llvm_exception("Unknown type in LLVM input");
