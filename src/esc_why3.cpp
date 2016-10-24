@@ -279,7 +279,7 @@ namespace whyr {
                 }
                 return name.str();
             } else {
-                return "Type_" + getWhy3SafeName(string(type->getStructName().data()));
+                return "Type_" + (cast<StructType>(type)->isPacked() ? string("Packed_") : string()) + getWhy3SafeName(string(type->getStructName().data()));
             }
         } else {
             throw llvm_exception("Unknown type in LLVM input");
@@ -306,7 +306,7 @@ namespace whyr {
                 }
                 return name.str();
             } else {
-                return "type_" + getWhy3SafeName(string(type->getStructName().data()));
+                return "type_" + (cast<StructType>(type)->isPacked() ? string("packed_") : string()) + getWhy3SafeName(string(type->getStructName().data()));
             }
         } else {
             throw llvm_exception("Unknown type in LLVM input");
