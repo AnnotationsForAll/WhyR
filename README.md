@@ -15,10 +15,11 @@ WhyR is a tool to convert programs written in [LLVM IR](http://llvm.org/) into a
 * Why3 model generation for the following LLVM constructs:
  * Most common LLVM instructions: Arithmetic, bitwise operations, casts, branches, calls, memory operations...
  * LLVM data types:
-   * Integers of any size
-   * Floats, doubles
-   * Array types
-   * PHI nodes
+        * Integers of any size
+        * Floats, doubles
+        * Array types
+        * Structure types
+ * PHI nodes
  * Indirect branches and block addresses
  * Memory operations (loading, storing, checking if valid addresses...)
  * Global variables
@@ -110,7 +111,6 @@ There are more features to WhyR then just ensures and requires clauses. Learn mo
 * Ability to take files directly in LLVM's IR (`.ll`) format
 * The following LLVM features:
  * Exception handling
- * Structure data types
  * Recursive functions
  * Intrinsic calls
  * Indirect function calls
