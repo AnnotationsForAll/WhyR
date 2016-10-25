@@ -110,6 +110,7 @@ There are more features to WhyR then just ensures and requires clauses. Learn mo
 
 * Ability to take files directly in LLVM's IR (`.ll`) format
 * The following LLVM features:
+ * Vector data types
  * Exception handling
  * Recursive functions
  * Intrinsic calls
