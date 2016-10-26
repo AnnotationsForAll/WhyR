@@ -1552,14 +1552,34 @@ end
             }
             case Instruction::OtherOps::Select: {
                 addOperand(out, func->getModule(), inst, func);
-                out << " = if ";
-                addOperand(out, func->getModule(), inst->getOperand(0), func);
-                out << " = ";
-                addLLVMIntConstant(out, func->getModule(), inst->getOperand(0)->getType(), "1");
-                out << " then ";
-                addOperand(out, func->getModule(), inst->getOperand(1), func);
-                out <<" else ";
-                addOperand(out, func->getModule(), inst->getOperand(2), func);
+                if (inst->getType()->isVectorTy()) {
+                    out << " = " << getWhy3TheoryName(inst->getType()) << ".any_vector";
+                    for (unsigned i = 0; i < inst->getType()->getVectorNumElements(); i++) {
+                        out << "[" << i << " <- ";
+                        
+                        out << "if ";
+                        addOperand(out, func->getModule(), inst->getOperand(0), func);
+                        out << "[" << i << "] = ";
+                        addLLVMIntConstant(out, func->getModule(), inst->getOperand(0)->getType()->getVectorElementType(), "1");
+                        out << " then ";
+                        addOperand(out, func->getModule(), inst->getOperand(1), func);
+                        out << "[" << i << "]";
+                        out <<" else ";
+                        addOperand(out, func->getModule(), inst->getOperand(2), func);
+                        out << "[" << i << "]";
+                        
+                        out << "]";
+                    }
+                } else {
+                    out << " = if ";
+                    addOperand(out, func->getModule(), inst->getOperand(0), func);
+                    out << " = ";
+                    addLLVMIntConstant(out, func->getModule(), inst->getOperand(0)->getType(), "1");
+                    out << " then ";
+                    addOperand(out, func->getModule(), inst->getOperand(1), func);
+                    out <<" else ";
+                    addOperand(out, func->getModule(), inst->getOperand(2), func);
+                }
                 break;
             }
             case Instruction::OtherOps::Call: {
