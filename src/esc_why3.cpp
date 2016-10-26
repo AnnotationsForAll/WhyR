@@ -673,6 +673,17 @@ end
                 out << "    use import real.FromInt" << endl;
                 break;
             }
+            case Instruction::CastOps::PtrToInt:
+            case Instruction::CastOps::IntToPtr: {
+                unsigned ptrBits = func->getModule()->rawIR()->getDataLayout().getPointerSizeInBits(0); // TODO: address spaces...
+                Type* ptrIntType = IntegerType::get(func->getModule()->rawIR()->getContext(), ptrBits);
+                if (inst->getType()->isVectorTy()) {
+                    ptrIntType = VectorType::get(ptrIntType, inst->getType()->getVectorNumElements());
+                }
+                
+                out << "    use import " << getWhy3TheoryName(ptrIntType) << endl;
+                break;
+            }
             case Instruction::MemoryOps::GetElementPtr:
             case Instruction::CastOps::BitCast: {
                 out << "    use import Pointer" << endl;
@@ -989,6 +1000,9 @@ end
                 
                 if (inst->getType()->getIntegerBitWidth() != ptrBits) {
                     Type* ptrIntType = IntegerType::get(func->getModule()->rawIR()->getContext(), ptrBits);
+                    if (inst->getType()->isVectorTy()) {
+                        ptrIntType = VectorType::get(ptrIntType, inst->getType()->getVectorNumElements());
+                    }
                     
                     out << "(" << getWhy3TheoryName(inst->getType()) << ".of_int (" << getWhy3TheoryName(ptrIntType) << ".to_uint ";
                 }
@@ -1011,6 +1025,9 @@ end
                 
                 if (inst->getOperand(0)->getType()->getIntegerBitWidth() != ptrBits) {
                     Type* ptrIntType = IntegerType::get(func->getModule()->rawIR()->getContext(), ptrBits);
+                    if (inst->getType()->isVectorTy()) {
+                        ptrIntType = VectorType::get(ptrIntType, inst->getType()->getVectorNumElements());
+                    }
                     
                     out << "(" << getWhy3TheoryName(ptrIntType) << ".of_int (" << getWhy3TheoryName(inst->getOperand(0)->getType()) << ".to_uint ";
                 }
@@ -2508,6 +2525,14 @@ end
         
         if (!info.ptrTypes.empty()) {
             info.intTypes.insert(Type::getIntNTy(module->rawIR()->getContext(), module->rawIR()->getDataLayout().getPointerSizeInBits(0))); // TODO: address spaces...
+        }
+        
+        if (!info.vectorTypes.empty()) {
+            for (unordered_set<VectorType*>::iterator ii = info.vectorTypes.begin(); ii != info.vectorTypes.end(); ii++) {
+                if ((*ii)->getVectorElementType()->isPointerTy()) {
+                    info.vectorTypes.insert(VectorType::get(Type::getIntNTy(module->rawIR()->getContext(), module->rawIR()->getDataLayout().getPointerSizeInBits(0)), (*ii)->getVectorNumElements())); // TODO: address spaces...
+                }
+            }
         }
         
         if (!info.intTypes.empty()) {
