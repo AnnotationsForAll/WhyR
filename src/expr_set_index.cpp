@@ -80,6 +80,18 @@ namespace whyr {
                 throw type_exception("Operator 'set' expected value type compatible with '" + lhs->returnType()->toString() + "'; got type '" + value->returnType()->toString() + "'", this);
             }
         }
+        
+        // if we are a vector type, rhs must be a logical int, and value must be the element's type
+        if (isa<LogicTypeLLVM>(lhs->returnType()) && cast<LogicTypeLLVM>(lhs->returnType())->getType()->isVectorTy()) {
+            if (!isa<LogicTypeInt>(rhs->returnType())) {
+                throw type_exception("Operator 'set' expected index type of 'int'; got type '" + rhs->returnType()->toString() + "'", this);
+            }
+            
+            Type* elemType = cast<LogicTypeLLVM>(lhs->returnType())->getType()->getVectorElementType();
+            if (!isa<LogicTypeLLVM>(value->returnType()) || cast<LogicTypeLLVM>(value->returnType())->getType() != elemType) {
+                throw type_exception("Operator 'set' expected value type compatible with '" + lhs->returnType()->toString() + "'; got type '" + value->returnType()->toString() + "'", this);
+            }
+        }
     }
     
     void LogicExpressionSetIndex::toWhy3(ostream &out, Why3Data &data) {
@@ -98,6 +110,13 @@ namespace whyr {
             out << " = ";
             value->toWhy3(out, data);
             out << ";}";
+        } else if (isa<LogicTypeLLVM>(lhs->returnType()) && cast<LogicTypeLLVM>(lhs->returnType())->getType()->isVectorTy()) {
+            lhs->toWhy3(out, data);
+            out << "[";
+            rhs->toWhy3(out, data);
+            out << " <- ";
+            value->toWhy3(out, data);
+            out << "]";
         }
     }
     

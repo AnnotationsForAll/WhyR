@@ -54,6 +54,15 @@ namespace whyr {
                 retType = new LogicTypeLLVM(cast<LogicTypeLLVM>(lhs->returnType())->getType()->getPointerElementType(), source);
             }
         }
+        
+        // if we are a vector type, rhs must be a logical int
+        if (isa<LogicTypeLLVM>(lhs->returnType()) && cast<LogicTypeLLVM>(lhs->returnType())->getType()->isVectorTy()) {
+            if (!isa<LogicTypeInt>(rhs->returnType())) {
+                throw type_exception("Operator 'get' expected index type of 'int'; got type '" + rhs->returnType()->toString() + "'", this);
+            } else {
+                retType = new LogicTypeLLVM(cast<LogicTypeLLVM>(lhs->returnType())->getType()->getVectorElementType(), source);
+            }
+        }
     }
     LogicExpressionGetIndex::~LogicExpressionGetIndex() {
         delete lhs;
@@ -99,6 +108,11 @@ namespace whyr {
             out << " (" << getWhy3TheoryName(cast<LogicTypeLLVM>(lhs->returnType())->getType()) << ".elem_size * ";
             rhs->toWhy3(out, data);
             out << ")))";
+        } else if (isa<LogicTypeLLVM>(lhs->returnType()) && cast<LogicTypeLLVM>(lhs->returnType())->getType()->isVectorTy()) {
+            lhs->toWhy3(out, data);
+            out << "[";
+            rhs->toWhy3(out, data);
+            out << "]";
         }
     }
     
