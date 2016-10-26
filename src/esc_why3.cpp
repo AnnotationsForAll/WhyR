@@ -1296,7 +1296,7 @@ end
                 ICmpInst* icmpInst = cast<ICmpInst>(inst);
                 
                 addOperand(out, func->getModule(), inst, func);
-                out << " = if (";
+                out << " = ";
                 string opStr;
                 if (icmpInst->getPredicate() == llvm::ICmpInst::ICMP_EQ || icmpInst->getPredicate() == llvm::ICmpInst::ICMP_NE) {
                     switch (icmpInst->getPredicate()) {
@@ -1313,9 +1313,38 @@ end
                         }
                     }
                     
-                    addOperand(out, func->getModule(), icmpInst->getOperand(0), func);
-                    out << opStr;
-                    addOperand(out, func->getModule(), icmpInst->getOperand(1), func);
+                    if (inst->getType()->isVectorTy()) {
+                        out << getWhy3TheoryName(inst->getType()) << ".any_vector";
+                        for (unsigned i = 0; i < inst->getType()->getVectorNumElements(); i++) {
+                            out << "[" << i << " <- ";
+                            
+                            out << "if (";
+                            
+                            addOperand(out, func->getModule(), icmpInst->getOperand(0), func);
+                            out << "[" << i << "]";
+                            out << opStr;
+                            addOperand(out, func->getModule(), icmpInst->getOperand(1), func);
+                            out << "[" << i << "]";
+                            
+                            out << ") then ";
+                            addLLVMIntConstant(out, func->getModule(), icmpInst->getType()->getVectorElementType(), "1");
+                            out << " else ";
+                            addLLVMIntConstant(out, func->getModule(), icmpInst->getType()->getVectorElementType(), "0");
+                            
+                            out << "]";
+                        }
+                    } else {
+                        out << "if (";
+                        
+                        addOperand(out, func->getModule(), icmpInst->getOperand(0), func);
+                        out << opStr;
+                        addOperand(out, func->getModule(), icmpInst->getOperand(1), func);
+                        
+                        out << ") then ";
+                        addLLVMIntConstant(out, func->getModule(), icmpInst->getType(), "1");
+                        out << " else ";
+                        addLLVMIntConstant(out, func->getModule(), icmpInst->getType(), "0");
+                    }
                 } else {
                     switch (icmpInst->getPredicate()) {
                         case llvm::ICmpInst::ICMP_SGT: {
@@ -1355,15 +1384,41 @@ end
                         }
                     }
                     
-                    out << getWhy3TheoryName(icmpInst->getOperand(0)->getType()) << "." << opStr << " ";
-                    addOperand(out, func->getModule(), icmpInst->getOperand(0), func);
-                    out << " ";
-                    addOperand(out, func->getModule(), icmpInst->getOperand(1), func);
+                    if (inst->getType()->isVectorTy()) {
+                        out << getWhy3TheoryName(inst->getType()) << ".any_vector";
+                        for (unsigned i = 0; i < inst->getType()->getVectorNumElements(); i++) {
+                            out << "[" << i << " <- ";
+                            
+                            out << "if (";
+                            
+                            out << getWhy3TheoryName(icmpInst->getOperand(0)->getType()->getVectorElementType()) << "." << opStr << " ";
+                            addOperand(out, func->getModule(), icmpInst->getOperand(0), func);
+                            out << "[" << i << "]";
+                            out << " ";
+                            addOperand(out, func->getModule(), icmpInst->getOperand(1), func);
+                            out << "[" << i << "]";
+                            
+                            out << ") then ";
+                            addLLVMIntConstant(out, func->getModule(), icmpInst->getType()->getVectorElementType(), "1");
+                            out << " else ";
+                            addLLVMIntConstant(out, func->getModule(), icmpInst->getType()->getVectorElementType(), "0");
+                            
+                            out << "]";
+                        }
+                    } else {
+                        out << "if (";
+                        
+                        out << getWhy3TheoryName(icmpInst->getOperand(0)->getType()) << "." << opStr << " ";
+                        addOperand(out, func->getModule(), icmpInst->getOperand(0), func);
+                        out << " ";
+                        addOperand(out, func->getModule(), icmpInst->getOperand(1), func);
+                        
+                        out << ") then ";
+                        addLLVMIntConstant(out, func->getModule(), icmpInst->getType(), "1");
+                        out << " else ";
+                        addLLVMIntConstant(out, func->getModule(), icmpInst->getType(), "0");
+                    }
                 }
-                out << ") then ";
-                addLLVMIntConstant(out, func->getModule(), icmpInst->getType(), "1");
-                out << " else ";
-                addLLVMIntConstant(out, func->getModule(), icmpInst->getType(), "0");
                 break;
             }
             case Instruction::OtherOps::FCmp: {
@@ -1371,69 +1426,86 @@ end
                 
                 addOperand(out, func->getModule(), inst, func);
                 if (fcmpInst->getPredicate() == FCmpInst::FCMP_FALSE) {
-                    out << " = ";
-                    addLLVMIntConstant(out, func->getModule(), fcmpInst->getType(), "0");
+                    if (inst->getType()->isVectorTy()) {
+                        out << " = " << getWhy3TheoryName(inst->getType()) << ".any_vector";
+                        for (unsigned i = 0; i < inst->getType()->getVectorNumElements(); i++) {
+                            out << "[" << i << " <- ";
+                            addLLVMIntConstant(out, func->getModule(), fcmpInst->getType()->getVectorElementType(), "0");
+                            out << "]";
+                        }
+                    } else {
+                        out << " = ";
+                        addLLVMIntConstant(out, func->getModule(), fcmpInst->getType(), "0");
+                    }
                 } else if (fcmpInst->getPredicate() == FCmpInst::FCMP_TRUE) {
-                    out << " = ";
-                    addLLVMIntConstant(out, func->getModule(), fcmpInst->getType(), "1");
+                    if (inst->getType()->isVectorTy()) {
+                        out << " = " << getWhy3TheoryName(inst->getType()) << ".any_vector";
+                        for (unsigned i = 0; i < inst->getType()->getVectorNumElements(); i++) {
+                            out << "[" << i << " <- ";
+                            addLLVMIntConstant(out, func->getModule(), fcmpInst->getType()->getVectorElementType(), "1");
+                            out << "]";
+                        }
+                    } else {
+                        out << " = ";
+                        addLLVMIntConstant(out, func->getModule(), fcmpInst->getType(), "1");
+                    }
                 } else {
-                    out << " = if (" << getWhy3TheoryName(fcmpInst->getOperand(0)->getType()) << ".";
-                   
+                    string opStr;
                     switch (fcmpInst->getPredicate()) {
                         case FCmpInst::FCMP_OEQ: {
-                            out << "oeq";
+                            opStr = "oeq";
                             break;
                         }
                         case FCmpInst::FCMP_OGT: {
-                            out << "ogt";
+                            opStr = "ogt";
                             break;
                         }
                         case FCmpInst::FCMP_OGE: {
-                            out << "oge";
+                            opStr = "oge";
                             break;
                         }
                         case FCmpInst::FCMP_OLT: {
-                            out << "olt";
+                            opStr = "olt";
                             break;
                         }
                         case FCmpInst::FCMP_OLE: {
-                            out << "ole";
+                            opStr = "ole";
                             break;
                         }
                         case FCmpInst::FCMP_ONE: {
-                            out << "one";
+                            opStr = "one";
                             break;
                         }
                         case FCmpInst::FCMP_ORD: {
-                            out << "ord";
+                            opStr = "ord";
                             break;
                         }
                         case FCmpInst::FCMP_UEQ: {
-                            out << "ueq";
+                            opStr = "ueq";
                             break;
                         }
                         case FCmpInst::FCMP_UGT: {
-                            out << "ugt";
+                            opStr = "ugt";
                             break;
                         }
                         case FCmpInst::FCMP_UGE: {
-                            out << "uge";
+                            opStr = "uge";
                             break;
                         }
                         case FCmpInst::FCMP_ULT: {
-                            out << "ult";
+                            opStr = "ult";
                             break;
                         }
                         case FCmpInst::FCMP_ULE: {
-                            out << "ule";
+                            opStr = "ule";
                             break;
                         }
                         case FCmpInst::FCMP_UNE: {
-                            out << "une";
+                            opStr = "une";
                             break;
                         }
                         case FCmpInst::FCMP_UNO: {
-                            out << "uno";
+                            opStr = "uno";
                             break;
                         }
                         default: {
@@ -1441,14 +1513,40 @@ end
                         }
                     }
                     
-                    out << " ";
-                    addOperand(out, func->getModule(), fcmpInst->getOperand(0), func);
-                    out << " ";
-                    addOperand(out, func->getModule(), fcmpInst->getOperand(1), func);
-                    out << ") then ";
-                    addLLVMIntConstant(out, func->getModule(), fcmpInst->getType(), "1");
-                    out << " else ";
-                    addLLVMIntConstant(out, func->getModule(), fcmpInst->getType(), "0");
+                    if (inst->getType()->isVectorTy()) {
+                        out << " = " << getWhy3TheoryName(inst->getType()) << ".any_vector";
+                        for (unsigned i = 0; i < inst->getType()->getVectorNumElements(); i++) {
+                            out << "[" << i << " <- ";
+                            
+                            out << "if (";
+                            
+                            out << getWhy3TheoryName(fcmpInst->getOperand(0)->getType()->getVectorElementType()) << "." << opStr << " ";
+                            addOperand(out, func->getModule(), fcmpInst->getOperand(0), func);
+                            out << "[" << i << "]";
+                            out << " ";
+                            addOperand(out, func->getModule(), fcmpInst->getOperand(1), func);
+                            out << "[" << i << "]";
+                            
+                            out << ") then ";
+                            addLLVMIntConstant(out, func->getModule(), fcmpInst->getType()->getVectorElementType(), "1");
+                            out << " else ";
+                            addLLVMIntConstant(out, func->getModule(), fcmpInst->getType()->getVectorElementType(), "0");
+                            
+                            out << "]";
+                        }
+                    } else {
+                        out << " = if (";
+                        
+                        out << getWhy3TheoryName(fcmpInst->getOperand(0)->getType()) << "." << opStr << " ";
+                        addOperand(out, func->getModule(), fcmpInst->getOperand(0), func);
+                        out << " ";
+                        addOperand(out, func->getModule(), fcmpInst->getOperand(1), func);
+                        
+                        out << ") then ";
+                        addLLVMIntConstant(out, func->getModule(), fcmpInst->getType(), "1");
+                        out << " else ";
+                        addLLVMIntConstant(out, func->getModule(), fcmpInst->getType(), "0");
+                    }
                 }
                 break;
             }
