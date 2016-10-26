@@ -885,7 +885,7 @@ end
             case Instruction::CastOps::Trunc: {
                 addOperand(out, func->getModule(), inst, func);
                 if (inst->getType()->isVectorTy()) {
-                    out << " = (" << getWhy3TheoryName(inst->getType()) << ".of_int " << getWhy3TheoryName(inst->getOperand(0)->getType()) << ".any_int_vector";
+                    out << " = (" << getWhy3TheoryName(inst->getType()) << ".of_int " << getWhy3TheoryName(inst->getType()) << ".any_int_vector";
                     for (unsigned i = 0; i < inst->getType()->getVectorNumElements(); i++) {
                         out << "[" << i << " <- (mod (" << getWhy3TheoryName(inst->getOperand(0)->getType()->getVectorElementType()) << ".to_uint ";
                         addOperand(out, func->getModule(), inst->getOperand(0), func);
@@ -932,23 +932,53 @@ end
             case Instruction::CastOps::FPToUI:
             case Instruction::CastOps::FPToSI: {
                 addOperand(out, func->getModule(), inst, func);
-                out << " = (" << getWhy3TheoryName(inst->getType()) << ".of_int (truncate (" << getWhy3TheoryName(inst->getOperand(0)->getType()) << ".to_real Rounding.NearestTiesToEven ";
-                addOperand(out, func->getModule(), inst->getOperand(0), func);
-                out << ")))";
+                if (inst->getType()->isVectorTy()) {
+                    out << " = (" << getWhy3TheoryName(inst->getType()) << ".of_int " << getWhy3TheoryName(inst->getType()) << ".any_int_vector";
+                    for (unsigned i = 0; i < inst->getType()->getVectorNumElements(); i++) {
+                        out << "[" << i << " <- (truncate (" << getWhy3TheoryName(inst->getOperand(0)->getType()->getVectorElementType()) << ".to_real Rounding.NearestTiesToEven ";
+                        addOperand(out, func->getModule(), inst->getOperand(0), func);
+                        out << "[" << i << "]))]";
+                    }
+                    out << ")";
+                } else {
+                    out << " = (" << getWhy3TheoryName(inst->getType()) << ".of_int (truncate (" << getWhy3TheoryName(inst->getOperand(0)->getType()) << ".to_real Rounding.NearestTiesToEven ";
+                    addOperand(out, func->getModule(), inst->getOperand(0), func);
+                    out << ")))";
+                }
                 break;
             }
             case Instruction::CastOps::UIToFP: {
                 addOperand(out, func->getModule(), inst, func);
-                out << " = (" << getWhy3TheoryName(inst->getType()) << ".of_real Rounding.NearestTiesToEven (from_int (" << getWhy3TheoryName(inst->getOperand(0)->getType()) << ".to_uint ";
-                addOperand(out, func->getModule(), inst->getOperand(0), func);
-                out << ")))";
+                if (inst->getType()->isVectorTy()) {
+                    out << " = (" << getWhy3TheoryName(inst->getType()) << ".of_real Rounding.NearestTiesToEven " << getWhy3TheoryName(inst->getType()) << ".any_real_vector";
+                    for (unsigned i = 0; i < inst->getType()->getVectorNumElements(); i++) {
+                        out << "[" << i << " <- (from_int (" << getWhy3TheoryName(inst->getOperand(0)->getType()->getVectorElementType()) << ".to_uint ";
+                        addOperand(out, func->getModule(), inst->getOperand(0), func);
+                        out << "[" << i << "]))]";
+                    }
+                    out << ")";
+                } else {
+                    out << " = (" << getWhy3TheoryName(inst->getType()) << ".of_real Rounding.NearestTiesToEven (from_int (" << getWhy3TheoryName(inst->getOperand(0)->getType()) << ".to_uint ";
+                    addOperand(out, func->getModule(), inst->getOperand(0), func);
+                    out << ")))";
+                }
                 break;
             }
             case Instruction::CastOps::SIToFP: {
                 addOperand(out, func->getModule(), inst, func);
-                out << " = (" << getWhy3TheoryName(inst->getType()) << ".of_real Rounding.NearestTiesToEven (from_int (" << getWhy3TheoryName(inst->getOperand(0)->getType()) << ".to_int ";
-                addOperand(out, func->getModule(), inst->getOperand(0), func);
-                out << ")))";
+                if (inst->getType()->isVectorTy()) {
+                    out << " = (" << getWhy3TheoryName(inst->getType()) << ".of_real Rounding.NearestTiesToEven " << getWhy3TheoryName(inst->getType()) << ".any_real_vector";
+                    for (unsigned i = 0; i < inst->getType()->getVectorNumElements(); i++) {
+                        out << "[" << i << " <- (from_int (" << getWhy3TheoryName(inst->getOperand(0)->getType()->getVectorElementType()) << ".to_int ";
+                        addOperand(out, func->getModule(), inst->getOperand(0), func);
+                        out << "[" << i << "]))]";
+                    }
+                    out << ")";
+                } else {
+                    out << " = (" << getWhy3TheoryName(inst->getType()) << ".of_real Rounding.NearestTiesToEven (from_int (" << getWhy3TheoryName(inst->getOperand(0)->getType()) << ".to_int ";
+                    addOperand(out, func->getModule(), inst->getOperand(0), func);
+                    out << ")))";
+                }
                 break;
             }
             case Instruction::CastOps::PtrToInt: {
