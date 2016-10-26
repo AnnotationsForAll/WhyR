@@ -1224,6 +1224,26 @@ end
                 }
                 break;
             }
+            case Instruction::OtherOps::ExtractElement: {
+                addOperand(out, func->getModule(), inst, func);
+                out << " = ";
+                addOperand(out, func->getModule(), inst->getOperand(0), func);
+                out << "[(" << getWhy3TheoryName(inst->getOperand(1)->getType()) << ".to_uint ";
+                addOperand(out, func->getModule(), inst->getOperand(1), func);
+                out << ")]";
+                break;
+            }
+            case Instruction::OtherOps::InsertElement: {
+                addOperand(out, func->getModule(), inst, func);
+                out << " = ";
+                addOperand(out, func->getModule(), inst->getOperand(0), func);
+                out << "[(" << getWhy3TheoryName(inst->getOperand(2)->getType()) << ".to_uint ";
+                addOperand(out, func->getModule(), inst->getOperand(2), func);
+                out << ") <- (" << getWhy3TheoryName(inst->getOperand(1)->getType()) << ".to_uint ";
+                addOperand(out, func->getModule(), inst->getOperand(1), func);
+                out << ")]";
+                break;
+            }
             case Instruction::OtherOps::ExtractValue: {
                 ExtractValueInst* exInst = cast<ExtractValueInst>(inst);
                 
