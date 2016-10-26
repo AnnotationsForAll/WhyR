@@ -884,13 +884,27 @@ end
             }
             case Instruction::CastOps::Trunc: {
                 addOperand(out, func->getModule(), inst, func);
-                out << " = (" << getWhy3TheoryName(inst->getType()) << ".of_int (mod (" << getWhy3TheoryName(inst->getOperand(0)->getType()) << ".to_uint ";
-                addOperand(out, func->getModule(), inst->getOperand(0), func);
-                out << ") 0b1";
-                for (unsigned i = 0; i < inst->getType()->getIntegerBitWidth(); i++) {
-                    out << "0";
+                if (inst->getType()->isVectorTy()) {
+                    out << " = (" << getWhy3TheoryName(inst->getType()) << ".of_int " << getWhy3TheoryName(inst->getOperand(0)->getType()) << ".any_int_vector";
+                    for (unsigned i = 0; i < inst->getType()->getVectorNumElements(); i++) {
+                        out << "[" << i << " <- (mod (" << getWhy3TheoryName(inst->getOperand(0)->getType()->getVectorElementType()) << ".to_uint ";
+                        addOperand(out, func->getModule(), inst->getOperand(0), func);
+                        out << "[" << i << "]) 0b1";
+                        for (unsigned j = 0; j < inst->getType()->getVectorElementType()->getIntegerBitWidth(); j++) {
+                            out << "0";
+                        }
+                        out << ")]";
+                    }
+                    out << ")";
+                } else {
+                    out << " = (" << getWhy3TheoryName(inst->getType()) << ".of_int (mod (" << getWhy3TheoryName(inst->getOperand(0)->getType()) << ".to_uint ";
+                    addOperand(out, func->getModule(), inst->getOperand(0), func);
+                    out << ") 0b1";
+                    for (unsigned i = 0; i < inst->getType()->getIntegerBitWidth(); i++) {
+                        out << "0";
+                    }
+                    out << "))";
                 }
-                out << "))";
                 break;
             }
             case Instruction::CastOps::ZExt: {
