@@ -46,6 +46,8 @@ namespace whyr {
         unordered_set<ArrayType*> arrayTypes;
         /// All the struct types used.
         unordered_set<StructType*> structTypes;
+        /// All the vector types used.
+        unordered_set<VectorType*> vectorTypes;
         /// All the functions called by other functions.
         unordered_set<Function*> funcsCalled;
         /// All the globals used by other functions.
@@ -260,6 +262,14 @@ namespace whyr {
      * Adds a theory for a struct type.
      */
     void addStructType(ostream &out, AnnotatedModule* module, StructType* type);
+    /**
+     * Adds the base theory for all vector types.
+     */
+    void addCommonVectorType(ostream &out, AnnotatedModule* module);
+    /**
+     * Adds a theory for a vector type.
+     */
+    void addVectorType(ostream &out, AnnotatedModule* module, VectorType* type);
     /**
      * Adds a theory for a derived type.
      * This function calls addArrayType, addPtrType, etc.

@@ -36,6 +36,9 @@ namespace whyr {
             for (unsigned i = 0; i < type->getStructNumElements(); i++) {
                 getTypeInfo(info, type->getStructElementType(i));
             }
+        } else if (type->isVectorTy()) {
+            info.vectorTypes.insert(cast<VectorType>(type));
+            getTypeInfo(info, type->getVectorElementType());
         } else if (type->isVoidTy() || type->isLabelTy()) {
             // do nothing
         } else {
@@ -284,6 +287,8 @@ namespace whyr {
             } else {
                 return "Type_" + getWhy3SafeName(string(type->getStructName().data()));
             }
+        } else if (type->isVectorTy()) {
+            return "Vector" + getWhy3TheoryName(type->getVectorElementType()) + "_" + to_string(type->getVectorNumElements()); 
         } else {
             throw llvm_exception("Unknown type in LLVM input");
         }
@@ -314,6 +319,8 @@ namespace whyr {
             } else {
                 return "type_" + getWhy3SafeName(string(type->getStructName().data()));
             }
+        } else if (type->isVectorTy()) {
+            return "v" + getWhy3TypeName(type->getVectorElementType()) + "_" + to_string(type->getVectorNumElements()); 
         } else {
             throw llvm_exception("Unknown type in LLVM input");
         }
@@ -464,6 +471,9 @@ end
         for (unordered_set<StructType*>::iterator ii = data.info->structTypes.begin(); ii != data.info->structTypes.end(); ii++) {
             out << "    use import " << getWhy3TheoryName(*ii) << endl;
         }
+        for (unordered_set<VectorType*>::iterator ii = data.info->vectorTypes.begin(); ii != data.info->vectorTypes.end(); ii++) {
+            out << "    use import " << getWhy3TheoryName(*ii) << endl;
+        }
         if (data.info->usesAlloc) {
             out << "    use import Alloc" << endl;
         }
@@ -575,6 +585,15 @@ end
                     out << "; ";
                 }
                 out << "}";
+            } else if (operand->getType()->isVectorTy()) {
+                Constant* value = cast<ConstantAggregateZero>(operand)->getSequentialElement();
+                
+                out << getWhy3TheoryName(operand->getType()) << ".any_vector";
+                for (unsigned i = 0; i < operand->getType()->getVectorNumElements(); i++) {
+                    out << "[" << i << " <- ";
+                    addOperand(out, module, value, func);
+                    out << "]";
+                }
             } else {
                 throw type_exception("Instantiation of aggregate zero of type '" + LogicTypeLLVM(operand->getType()).toString() + "' currently unsupported");
             }
@@ -592,7 +611,25 @@ end
             }
             
             out << ")";
-        } else { // Else, if it is a local variable...
+        } else if (isa<ConstantVector>(operand)) {
+            ConstantVector* cc = cast<ConstantVector>(operand);
+            out << getWhy3TheoryName(operand->getType()) << ".any_vector";
+            for (unsigned i = 0; i < cc->getNumOperands(); i++) {
+                out << "[" << i << " <- ";
+                addOperand(out, module, cc->getOperand(i), func);
+                out << "]";
+            }
+        } else if (isa<ConstantDataVector>(operand)) {
+            // data vectors are just another vector constant
+            ConstantDataVector* cc = cast<ConstantDataVector>(operand);
+            out << getWhy3TheoryName(operand->getType()) << ".any_vector";
+            for (unsigned i = 0; i < cc->getNumElements(); i++) {
+                out << "[" << i << " <- ";
+                addOperand(out, module, cc->getElementAsConstant(i), func);
+                out << "]";
+            }
+        } else {
+            // Else, if it is a local variable...
             out << getWhy3VarName(operand);
         }
     }
@@ -1911,6 +1948,182 @@ end
         out << "end" << endl << endl;
     }
     
+    void addCommonVectorType(ostream &out, AnnotatedModule* module) {
+        out << "theory LLVMVector" << endl;
+        out << "    use export map.Map" << endl;
+        out << "    use import int.Int" << endl;
+        
+        out << "    type t" << endl;
+        out << "    type v = (map int t)" << endl;
+        
+        out << "    constant elem_num : int" << endl;
+        out << "    constant size : int" << endl;
+        out << "    constant elem_size : int" << endl;
+        
+        out << "    constant any_vector : v" << endl;
+        out << "end" << endl << endl;
+    }
+    
+    void addVectorType(ostream &out, AnnotatedModule* module, VectorType* type) {
+        out << "theory " << getWhy3TheoryName(type) << endl;
+        out << "    use import " << getWhy3TheoryName(type->getVectorElementType()) << endl;
+        out << "    use import bool.Bool" << endl;
+        out << "    use import int.Int" << endl;
+        
+        out << "    constant elem_num : int = " << type->getVectorNumElements() << endl;
+        out << "    constant size : int = " << getWhy3TheoryName(type->getVectorElementType()) << ".size * elem_num" << endl;
+        out << "    constant elem_size : int = " << getWhy3TheoryName(type->getVectorElementType()) << ".size" << endl;
+        
+        out << "    clone export LLVMVector with" << endl;
+        out << "        constant elem_num = elem_num," << endl;
+        out << "        constant size = size," << endl;
+        out << "        constant elem_size = elem_size," << endl;
+        out << "        type t = " << getWhy3FullName(type->getVectorElementType()) << endl;
+        out << "    type " << getWhy3TypeName(type) << " = v" << endl;
+        
+        // add the vector versions of operators that can be done on the element type
+        if (type->getVectorElementType()->isIntegerTy()) {
+            out << "    type bool_vector = (map int bool)" << endl;
+            out << "    constant any_bool_vector : bool_vector" << endl;
+            out << "    type int_vector = (map int int)" << endl;
+            out << "    constant any_int_vector : int_vector" << endl;
+            
+            static const list<string> mathOps({"add","sub","mul","udiv","sdiv","urem","srem", "bw_and", "bw_or", "bw_xor"});
+            for (list<string>::const_iterator ii = mathOps.begin(); ii != mathOps.end(); ii++) {
+                out << "    function " << *ii << " (a:v) (b:v) :v = any_vector";
+                for (unsigned i = 0; i < type->getVectorNumElements(); i++) {
+                    out << "[" << i << " <- (" << getWhy3TheoryName(type->getVectorElementType()) << "." << *ii << " a[" << i << "] b[" << i << "])]";
+                }
+                out << endl;
+            }
+            
+            {
+                out << "    function bw_not (a:v) :v = any_vector";
+                for (unsigned i = 0; i < type->getVectorNumElements(); i++) {
+                    out << "[" << i << " <- (" << getWhy3TheoryName(type->getVectorElementType()) << ".bw_not " << " a[" << i << "])]";
+                }
+                out << endl;
+            }
+            
+            static const list<string> shiftOps({"lsl", "lsr", "asr"});
+            for (list<string>::const_iterator ii = shiftOps.begin(); ii != shiftOps.end(); ii++) {
+                out << "    function " << *ii << " (a:v) (b:int_vector) :v = any_vector";
+                for (unsigned i = 0; i < type->getVectorNumElements(); i++) {
+                    out << "[" << i << " <- (" << getWhy3TheoryName(type->getVectorElementType()) << "." << *ii << " a[" << i << "] b[" << i << "])]";
+                }
+                out << endl;
+            }
+            
+            static const list<string> compOps({"ugt","uge","ult","ule","sgt","sge","slt","sle"});
+            for (list<string>::const_iterator ii = compOps.begin(); ii != compOps.end(); ii++) {
+                out << "    function " << *ii << " (a:v) (b:v) :bool_vector = any_bool_vector";
+                for (unsigned i = 0; i < type->getVectorNumElements(); i++) {
+                    out << "[" << i << " <- (" << getWhy3TheoryName(type->getVectorElementType()) << "." << *ii << " a[" << i << "] b[" << i << "])]";
+                }
+                out << endl;
+            }
+            
+            {
+                out << "    function to_uint (a:v) :int_vector = any_int_vector";
+                for (unsigned i = 0; i < type->getVectorNumElements(); i++) {
+                    out << "[" << i << " <- (" << getWhy3TheoryName(type->getVectorElementType()) << ".to_uint a[" << i << "])]";
+                }
+                out << endl;
+            }
+            
+            {
+                out << "    function to_int (a:v) :int_vector = any_int_vector";
+                for (unsigned i = 0; i < type->getVectorNumElements(); i++) {
+                    out << "[" << i << " <- (" << getWhy3TheoryName(type->getVectorElementType()) << ".to_int a[" << i << "])]";
+                }
+                out << endl;
+            }
+            
+            {
+                out << "    function of_int (a:int_vector) :v = any_vector";
+                for (unsigned i = 0; i < type->getVectorNumElements(); i++) {
+                    out << "[" << i << " <- (" << getWhy3TheoryName(type->getVectorElementType()) << ".of_int a[" << i << "])]";
+                }
+                out << endl;
+            }
+        } else if (type->getVectorElementType()->isFloatingPointTy()) {
+            out << "    use import real.Real" << endl;
+            
+            out << "    type bool_vector = (map int bool)" << endl;
+            out << "    constant any_bool_vector : bool_vector" << endl;
+            out << "    type real_vector = (map int real)" << endl;
+            out << "    constant any_real_vector : real_vector" << endl;
+            
+            static const list<string> mathOps({"fadd","fsub","fmul","fdiv","frem"});
+            for (list<string>::const_iterator ii = mathOps.begin(); ii != mathOps.end(); ii++) {
+                out << "    function " << *ii << " (m:Rounding.mode) (a:v) (b:v) :v = any_vector";
+                for (unsigned i = 0; i < type->getVectorNumElements(); i++) {
+                    out << "[" << i << " <- (" << getWhy3TheoryName(type->getVectorElementType()) << "." << *ii << " m a[" << i << "] b[" << i << "])]";
+                }
+                out << endl;
+            }
+            
+            static const list<string> compOps({"oeq","ogt","oge","olt","ole","one","ord","ueq","ugt","uge","ult","ule","une","uno"});
+            for (list<string>::const_iterator ii = compOps.begin(); ii != compOps.end(); ii++) {
+                out << "    function " << *ii << " (a:v) (b:v) :bool_vector = any_bool_vector";
+                for (unsigned i = 0; i < type->getVectorNumElements(); i++) {
+                    out << "[" << i << " <- (" << getWhy3TheoryName(type->getVectorElementType()) << "." << *ii << " a[" << i << "] b[" << i << "])]";
+                }
+                out << endl;
+            }
+            
+            {
+                out << "    function to_real (m:Rounding.mode) (a:v) :real_vector = any_real_vector";
+                for (unsigned i = 0; i < type->getVectorNumElements(); i++) {
+                    out << "[" << i << " <- (" << getWhy3TheoryName(type->getVectorElementType()) << ".to_real m a[" << i << "])]";
+                }
+                out << endl;
+            }
+            
+            {
+                out << "    function of_real (m:Rounding.mode) (a:real_vector) :v = any_vector";
+                for (unsigned i = 0; i < type->getVectorNumElements(); i++) {
+                    out << "[" << i << " <- (" << getWhy3TheoryName(type->getVectorElementType()) << ".of_real m a[" << i << "])]";
+                }
+                out << endl;
+            }
+        } else if (type->getVectorElementType()->isPointerTy()) {
+            Type* ptrint = IntegerType::get(module->rawIR()->getContext(), module->rawIR()->getDataLayout().getPointerSizeInBits(0)); // TODO: address spaces...
+            out << "    namespace import PTRINT use import " << getWhy3TheoryName(ptrint) << " end" << endl;
+            
+            out << "    type int_vector = (map int int)" << endl;
+            out << "    constant any_int_vector : int_vector" << endl;
+            out << "    type ptrint_vector = (map int PTRINT." << getWhy3FullName(ptrint) << ")" << endl;
+            out << "    constant any_ptrint_vector : ptrint_vector" << endl;
+            
+            {
+                out << "    function offset_pointer (a:v) (b:int_vector) :v = any_vector";
+                for (unsigned i = 0; i < type->getVectorNumElements(); i++) {
+                    out << "[" << i << " <- (" << getWhy3TheoryName(type->getVectorElementType()) << ".offset_pointer a[" << i << "] b[" << i << "])]";
+                }
+                out << endl;
+            }
+            
+            {
+                out << "    function to_ptrint (a:v) :ptrint_vector = any_ptrint_vector";
+                for (unsigned i = 0; i < type->getVectorNumElements(); i++) {
+                    out << "[" << i << " <- (" << getWhy3TheoryName(type->getVectorElementType()) << ".to_ptrint a[" << i << "])]";
+                }
+                out << endl;
+            }
+            
+            {
+                out << "    function of_ptrint (a:ptrint_vector) :v = any_vector";
+                for (unsigned i = 0; i < type->getVectorNumElements(); i++) {
+                    out << "[" << i << " <- (" << getWhy3TheoryName(type->getVectorElementType()) << ".of_ptrint a[" << i << "])]";
+                }
+                out << endl;
+            }
+        }
+        
+        out << "end" << endl << endl;
+    }
+    
     void addDerivedType(ostream &out, AnnotatedModule* module, Type* type) {
         if (type->isPointerTy()) {
             addPtrType(out, module, cast<PointerType>(type));
@@ -1918,6 +2131,8 @@ end
             addArrayType(out, module, cast<ArrayType>(type));
         } else if (type->isStructTy()) {
             addStructType(out, module, cast<StructType>(type));
+        } else if (type->isVectorTy()) {
+            addVectorType(out, module, cast<VectorType>(type));
         }
     }
     
@@ -2115,6 +2330,7 @@ end
         notSeen.insert(info.ptrTypes.begin(), info.ptrTypes.end());
         notSeen.insert(info.arrayTypes.begin(), info.arrayTypes.end());
         notSeen.insert(info.structTypes.begin(), info.structTypes.end());
+        notSeen.insert(info.vectorTypes.begin(), info.vectorTypes.end());
         
         // while there's still more nodes in need of calculation; that is, if the state changed since last iteration...
         bool changed;
@@ -2140,6 +2356,10 @@ end
                             allSeen = false;
                             break;
                         }
+                    }
+                } else if ((*ii)->isVectorTy()) {
+                    if (notSeen.find((*ii)->getVectorElementType()) != notSeen.end()) {
+                        allSeen = false;
                     }
                 }
                 
@@ -2272,6 +2492,10 @@ end
         
         if (!info.structTypes.empty()) {
             addCommonStructType(out, module);
+        }
+        
+        if (!info.vectorTypes.empty()) {
+            addCommonVectorType(out, module);
         }
         
         list<Type*> types;
