@@ -1080,35 +1080,88 @@ end
             case Instruction::MemoryOps::GetElementPtr: {
                 GetElementPtrInst* gepInst = cast<GetElementPtrInst>(inst);
                 addOperand(out, func->getModule(), inst, func);
-                out << " = (cast (" << getWhy3TheoryName(gepInst->getPointerOperand()->getType()) << ".offset_pointer ";
-                addOperand(out, func->getModule(), gepInst->getPointerOperand(), func);
-                out << " (";
-                Type* currentType = gepInst->getPointerOperandType();
-                if (gepInst->getNumIndices() == 0) {
-                    out << "0";
-                }
-                for (GetElementPtrInst::op_iterator ii = gepInst->idx_begin(); ii != gepInst->idx_end(); ii++) {
-                    if (ii != gepInst->idx_begin()) {
-                        out << " + ";
+                if (inst->getType()->isVectorTy()) {
+                    out << " = " << getWhy3TheoryName(inst->getType()) << ".any_vector";
+                    for (unsigned i = 0; i < inst->getType()->getVectorNumElements(); i++) {
+                        out << "[" << i << " <- (cast (" << getWhy3TheoryName(gepInst->getPointerOperandType()->isVectorTy() ? gepInst->getPointerOperandType()->getVectorElementType() : gepInst->getPointerOperandType()) << ".offset_pointer ";
+                        addOperand(out, func->getModule(), gepInst->getPointerOperand(), func);
+                        if (gepInst->getPointerOperandType()->isVectorTy()) out << "[" << i << "]";
+                        out << " (";
+                        Type* currentType = gepInst->getPointerOperandType()->isVectorTy() ? gepInst->getPointerOperandType()->getVectorElementType() : gepInst->getPointerOperandType();
+                        if (gepInst->getNumIndices() == 0) {
+                            out << "0";
+                        }
+                        for (GetElementPtrInst::op_iterator ii = gepInst->idx_begin(); ii != gepInst->idx_end(); ii++) {
+                            if (ii != gepInst->idx_begin()) {
+                                out << " + ";
+                            }
+                            if (currentType->isPointerTy()) {
+                                out << "(" << getWhy3TheoryName(currentType) << ".size * (" << getWhy3TheoryName(ii->get()->getType()->isVectorTy() ? ii->get()->getType()->getVectorElementType() : ii->get()->getType()) << ".to_int ";
+                                addOperand(out, func->getModule(), ii->get(), func);
+                                if (ii->get()->getType()->isVectorTy()) out << "[" << i << "]";
+                                out << "))";
+                                currentType = currentType->getPointerElementType();
+                            } else if (currentType->isArrayTy()) {
+                                out << "(" << getWhy3TheoryName(currentType->getArrayElementType()) << ".size * (" << getWhy3TheoryName(ii->get()->getType()->isVectorTy() ? ii->get()->getType()->getVectorElementType() : ii->get()->getType()) << ".to_int ";
+                                addOperand(out, func->getModule(), ii->get(), func);
+                                if (ii->get()->getType()->isVectorTy()) out << "[" << i << "]";
+                                out << "))";
+                                currentType = currentType->getArrayElementType();
+                            } else if (currentType->isStructTy()) {
+                                unsigned index = cast<ConstantDataVector>(ii->get())->getElementAsInteger(i);
+                                unsigned offset = func->getModule()->rawIR()->getDataLayout().getStructLayout(cast<StructType>(currentType))->getElementOffsetInBits(index);
+                                out << offset;
+                                currentType = currentType->getStructElementType(index);
+                            } else if (currentType->isVectorTy()) {
+                                out << "(" << getWhy3TheoryName(currentType->getVectorElementType()) << ".size * (" << getWhy3TheoryName(ii->get()->getType()->isVectorTy() ? ii->get()->getType()->getVectorElementType() : ii->get()->getType()) << ".to_int ";
+                                addOperand(out, func->getModule(), ii->get(), func);
+                                if (ii->get()->getType()->isVectorTy()) out << "[" << i << "]";
+                                out << "))";
+                                currentType = currentType->getVectorElementType();
+                            } else {
+                                throw whyr_exception("Internal error: Unknown index type to GEP instruction: " + LogicTypeLLVM(currentType).toString(), NULL, new NodeSource(func, inst));
+                            }
+                        }
+                        out << ")))]";
                     }
-                    if (currentType->isPointerTy()) {
-                        out << "(" << getWhy3TheoryName(currentType) << ".size * (" << getWhy3TheoryName(ii->get()->getType()) << ".to_int ";
-                        addOperand(out, func->getModule(), ii->get(), func);
-                        out << "))";
-                        currentType = currentType->getPointerElementType();
-                    } else if (currentType->isArrayTy()) {
-                        out << "(" << getWhy3TheoryName(currentType->getArrayElementType()) << ".size * (" << getWhy3TheoryName(ii->get()->getType()) << ".to_int ";
-                        addOperand(out, func->getModule(), ii->get(), func);
-                        out << "))";
-                        currentType = currentType->getArrayElementType();
-                    } else if (currentType->isStructTy()) {
-                        unsigned index = cast<ConstantInt>(ii->get())->getLimitedValue();
-                        unsigned offset = func->getModule()->rawIR()->getDataLayout().getStructLayout(cast<StructType>(currentType))->getElementOffsetInBits(index);
-                        out << offset;
-                        currentType = currentType->getStructElementType(index);
+                } else {
+                    out << " = (cast (" << getWhy3TheoryName(gepInst->getPointerOperand()->getType()) << ".offset_pointer ";
+                    addOperand(out, func->getModule(), gepInst->getPointerOperand(), func);
+                    out << " (";
+                    Type* currentType = gepInst->getPointerOperandType();
+                    if (gepInst->getNumIndices() == 0) {
+                        out << "0";
                     }
+                    for (GetElementPtrInst::op_iterator ii = gepInst->idx_begin(); ii != gepInst->idx_end(); ii++) {
+                        if (ii != gepInst->idx_begin()) {
+                            out << " + ";
+                        }
+                        if (currentType->isPointerTy()) {
+                            out << "(" << getWhy3TheoryName(currentType) << ".size * (" << getWhy3TheoryName(ii->get()->getType()) << ".to_int ";
+                            addOperand(out, func->getModule(), ii->get(), func);
+                            out << "))";
+                            currentType = currentType->getPointerElementType();
+                        } else if (currentType->isArrayTy()) {
+                            out << "(" << getWhy3TheoryName(currentType->getArrayElementType()) << ".size * (" << getWhy3TheoryName(ii->get()->getType()) << ".to_int ";
+                            addOperand(out, func->getModule(), ii->get(), func);
+                            out << "))";
+                            currentType = currentType->getArrayElementType();
+                        } else if (currentType->isStructTy()) {
+                            unsigned index = cast<ConstantInt>(ii->get())->getLimitedValue();
+                            unsigned offset = func->getModule()->rawIR()->getDataLayout().getStructLayout(cast<StructType>(currentType))->getElementOffsetInBits(index);
+                            out << offset;
+                            currentType = currentType->getStructElementType(index);
+                        } else if (currentType->isVectorTy()) {
+                            out << "(" << getWhy3TheoryName(currentType->getVectorElementType()) << ".size * (" << getWhy3TheoryName(ii->get()->getType()) << ".to_int ";
+                            addOperand(out, func->getModule(), ii->get(), func);
+                            out << "))";
+                            currentType = currentType->getVectorElementType();
+                        } else {
+                            throw whyr_exception("Internal error: Unknown index type to GEP instruction", NULL, new NodeSource(func, inst));
+                        }
+                    }
+                    out << ")))";
                 }
-                out << ")))";
                 break;
             }
             case Instruction::OtherOps::ExtractValue: {
