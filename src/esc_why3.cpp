@@ -1244,6 +1244,32 @@ end
                 out << ")]";
                 break;
             }
+            case Instruction::OtherOps::ShuffleVector: {
+                ShuffleVectorInst* shufInst = cast<ShuffleVectorInst>(inst);
+                
+                addOperand(out, func->getModule(), inst, func);
+                out << " = ";
+                out << getWhy3TheoryName(inst->getType()) << ".any_vector";
+                
+                int size_arg1 = shufInst->getOperand(0)->getType()->getVectorNumElements();
+                for (unsigned i = 0; i < inst->getType()->getVectorNumElements(); i++) {
+                    int mask = shufInst->getMaskValue(i);
+                    if (mask >= 0) { // if the mask is undef (-1), skip it
+                        Value* vec;
+                        if (mask < size_arg1) {
+                            vec = shufInst->getOperand(0);
+                        } else {
+                            vec = shufInst->getOperand(1);
+                            mask -= size_arg1;
+                        }
+                        
+                        out << "[" << i << " <- ";
+                        addOperand(out, func->getModule(), vec, func);
+                        out << "[" << mask << "]]";
+                    }
+                }
+                break;
+            }
             case Instruction::OtherOps::ExtractValue: {
                 ExtractValueInst* exInst = cast<ExtractValueInst>(inst);
                 
