@@ -22,3 +22,8 @@ define <4 x i8*> @vinttoptr() {
     %a = inttoptr <4 x i16> zeroinitializer to <4 x i8*>
     ret <4 x i8*> %a
 }
+
+define <4 x i32> @vext() {
+    %a = zext <4 x i16> zeroinitializer to <4 x i32>
+    ret <4 x i32> %a
+}
