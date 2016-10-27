@@ -65,12 +65,8 @@ namespace whyr {
             throw type_exception(("Expression '" + toString() + "' undefined between types '" + lhs->returnType()->toString() + "' and '" + rhs->returnType()->toString() + "'").c_str(), this);
         }
         
-        // The operands need to be LLVM ints
-        if (isa<LogicTypeLLVM>(returnType())) {
-            if (!cast<LogicTypeLLVM>(returnType())->getType()->isIntegerTy()) {
-                throw type_exception(("Expression '" + toString() + "' undefined for non-LLVM-int type '" + returnType()->toString() + "'").c_str(), this);
-            }
-        } else {
+        // The operands need to be LLVM ints, or LLVM int vectors
+        if (!isa<LogicTypeLLVM>(returnType()) || !cast<LogicTypeLLVM>(returnType())->getType()->isIntOrIntVectorTy()) {
             throw type_exception(("Expression '" + toString() + "' undefined for non-LLVM-int type '" + returnType()->toString() + "'").c_str(), this);
         }
     }
@@ -102,18 +98,11 @@ namespace whyr {
                 break;
             }
             case LogicExpressionBinaryBits::OP_SMOD: {
-                data.importsNeeded.insert("int.ComputerDivision");
-                out << "let op_result = (srem ";
+                // FIXME: remainder and modulus are slightly different
+                out << "srem ";
                 lhs->toWhy3(out, data);
                 out << " ";
                 rhs->toWhy3(out, data);
-                out << ") in if ";
-                lhs->toWhy3(out, data);
-                out << " >= 0 <-> ";
-                rhs->toWhy3(out, data);
-                out << " >= 0 then op_result else (sub ";
-                addLLVMIntConstant(out, data.module, cast<LogicTypeLLVM>(returnType())->getType(), "0");
-                out << " op_result)";
                 break;
             }
             case LogicExpressionBinaryBits::OP_SREM: {

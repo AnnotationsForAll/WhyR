@@ -40,11 +40,7 @@ namespace whyr {
         rhs->checkTypes();
         
         // The operand needs to be an LLVM int
-        if (isa<LogicTypeLLVM>(returnType())) {
-            if (!cast<LogicTypeLLVM>(returnType())->getType()->isIntegerTy()) {
-                throw type_exception(("Operator 'bnot' undefined for non-numeric type '" + returnType()->toString() + "'"), this);
-            }
-        } else {
+        if (!isa<LogicTypeLLVM>(returnType()) || !cast<LogicTypeLLVM>(returnType())->getType()->isIntOrIntVectorTy()) {
             throw type_exception(("Operator 'bnot' undefined for non-numeric type '" + returnType()->toString() + "'"), this);
         }
     }

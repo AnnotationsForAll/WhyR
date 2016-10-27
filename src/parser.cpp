@@ -800,6 +800,30 @@ namespace whyr {
         }
     };
     
+    class ParserVectorConst : public ExpressionParser {
+    public:
+        LogicExpression* parse(const char* exprName, MDNode* node, NodeSource* source) {
+            requireMinArgs(node, exprName, source, 1);
+            
+            LogicExpression* baseTypeExpr = ExpressionParser::parseMetadata(node->getOperand(1).get(), source);
+            if (!isa<LogicTypeType>(baseTypeExpr->returnType())) {
+                throw type_exception(("Argument 1 to 'vector' must be of type 'type', got type '" + baseTypeExpr->returnType()->toString() + "'"), NULL, source);
+            }
+            LogicType* baseTypeRaw = cast<LogicTypeType>(baseTypeExpr->returnType())->getType();
+            if (!isa<LogicTypeLLVM>(baseTypeRaw)) {
+                throw type_exception(("Argument 1 to 'vector' must be an LLVM type, got type '" + baseTypeRaw->toString() + "'"), NULL, source);
+            }
+            LogicTypeLLVM* baseType = cast<LogicTypeLLVM>(baseTypeRaw);
+            
+            list<LogicExpression*>* elems = new list<LogicExpression*>();
+            for (unsigned i = 2; i < node->getNumOperands(); i++) {
+                elems->push_back(parseMetadata(node->getOperand(i).get(), source));
+            }
+            
+            return new LogicExpressionLLVMVectorConstant(baseType->getType(), elems, source);
+        }
+    };
+    
     /* ==========================
      * PARSER REGISTRY DATA TABLE
      * ==========================
@@ -900,6 +924,7 @@ namespace whyr {
         {"minuint",new ParserSpecLLVMConst(LogicExpressionSpecialLLVMConstant::OP_MINUINT)},
         {"blockaddress",new ParserBaddr()},
         {"struct",new ParserStructConst()},
+        {"vector",new ParserVectorConst()},
     });
     map<string,ExpressionParser*>* ExpressionParser::getExpressionParsers() {
         return &parsers;

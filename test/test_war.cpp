@@ -170,4 +170,10 @@ INSTANTIATE_TEST_CASE_P(,WarTests,(setup(), ::testing::ValuesIn((WarTestData[]){
     {"(struct {i32}) struct {(i32)1+(i32)2}", new whyr::LogicTypeLLVM(llvm::StructType::get(llvm::Type::getIntNTy(*ctx,32), NULL))},
     {"((struct {i32}) struct {(i32)1})[0]", new whyr::LogicTypeLLVM(llvm::Type::getIntNTy(*ctx,32))},
     {"((struct {i32}) struct {(i32)1})[0 = (i32)0]", new whyr::LogicTypeLLVM(llvm::StructType::get(llvm::Type::getIntNTy(*ctx,32), NULL))},
+    {"(vector) {(i32)1,(i32)2}", new whyr::LogicTypeLLVM(llvm::VectorType::get(llvm::Type::getIntNTy(*ctx,32), 2))},
+    {"(vector) {(float)2.1,(float)0.0}", new whyr::LogicTypeLLVM(llvm::VectorType::get(llvm::Type::getFloatTy(*ctx), 2))},
+    {"(vector) {(i32*)null,(i32*)null}", new whyr::LogicTypeLLVM(llvm::VectorType::get(llvm::PointerType::get(llvm::Type::getIntNTy(*ctx,32), 0), 2))},
+    {"(vector) {(i32)1,(i32)2} + (vector) {(i32)3,(i32)4}", new whyr::LogicTypeLLVM(llvm::VectorType::get(llvm::Type::getIntNTy(*ctx,32), 2))},
+    {"((vector) {(i32)1,(i32)2})[0]", new whyr::LogicTypeLLVM(llvm::Type::getIntNTy(*ctx,32))},
+    {"((vector) {(i32)1,(i32)2})[0 = (i32)42]", new whyr::LogicTypeLLVM(llvm::VectorType::get(llvm::Type::getIntNTy(*ctx,32), 2))},
 })));

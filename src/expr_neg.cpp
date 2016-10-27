@@ -44,7 +44,7 @@ namespace whyr {
             case LOGIC_TYPE_LLVM: {
                 // fail only if LLVM type is non-numeric
                 Type* ty = cast<LogicTypeLLVM>(returnType())->getType();
-                if (!(ty->isIntegerTy() || ty->isFloatingPointTy())) {
+                if (!(ty->isIntOrIntVectorTy() || ty->isFPOrFPVectorTy())) {
                     goto non_numeric_type;
                 }
                 break;
@@ -63,13 +63,13 @@ namespace whyr {
     }
     
     void LogicExpressionNegate::toWhy3(ostream &out, Why3Data &data) {
-        if (isa<LogicTypeLLVM>(rhs->returnType()) && cast<LogicTypeLLVM>(rhs->returnType())->getType()->isIntegerTy()) {
+        if (isa<LogicTypeLLVM>(rhs->returnType()) && cast<LogicTypeLLVM>(rhs->returnType())->getType()->isIntOrIntVectorTy()) {
             out << "(" << getWhy3TheoryName(cast<LogicTypeLLVM>(rhs->returnType())->getType()) << ".sub ";
             addLLVMIntConstant(out, data.module, cast<LogicTypeLLVM>(rhs->returnType())->getType(), "0");
             out << " ";
             rhs->toWhy3(out, data);
             out << ")";
-        } else if (isa<LogicTypeLLVM>(rhs->returnType()) && cast<LogicTypeLLVM>(rhs->returnType())->getType()->isFloatingPointTy()) {
+        } else if (isa<LogicTypeLLVM>(rhs->returnType()) && cast<LogicTypeLLVM>(rhs->returnType())->getType()->isFPOrFPVectorTy()) {
             data.importsNeeded.insert("floating_point.Rounding");
             out << "(" << getWhy3TheoryName(cast<LogicTypeLLVM>(rhs->returnType())->getType()) << ".fsub Rounding.NearestTiesToEven ";
             addLLVMFloatConstant(out, data.module, cast<LogicTypeLLVM>(rhs->returnType())->getType(), "0.0");

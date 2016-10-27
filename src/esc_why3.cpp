@@ -36,6 +36,9 @@ namespace whyr {
             for (unsigned i = 0; i < type->getStructNumElements(); i++) {
                 getTypeInfo(info, type->getStructElementType(i));
             }
+        } else if (type->isVectorTy()) {
+            info.vectorTypes.insert(cast<VectorType>(type));
+            getTypeInfo(info, type->getVectorElementType());
         } else if (type->isVoidTy() || type->isLabelTy()) {
             // do nothing
         } else {
@@ -284,6 +287,8 @@ namespace whyr {
             } else {
                 return "Type_" + getWhy3SafeName(string(type->getStructName().data()));
             }
+        } else if (type->isVectorTy()) {
+            return "Vector" + getWhy3TheoryName(type->getVectorElementType()) + "_" + to_string(type->getVectorNumElements()); 
         } else {
             throw llvm_exception("Unknown type in LLVM input");
         }
@@ -314,6 +319,8 @@ namespace whyr {
             } else {
                 return "type_" + getWhy3SafeName(string(type->getStructName().data()));
             }
+        } else if (type->isVectorTy()) {
+            return "v" + getWhy3TypeName(type->getVectorElementType()) + "_" + to_string(type->getVectorNumElements()); 
         } else {
             throw llvm_exception("Unknown type in LLVM input");
         }
@@ -464,6 +471,9 @@ end
         for (unordered_set<StructType*>::iterator ii = data.info->structTypes.begin(); ii != data.info->structTypes.end(); ii++) {
             out << "    use import " << getWhy3TheoryName(*ii) << endl;
         }
+        for (unordered_set<VectorType*>::iterator ii = data.info->vectorTypes.begin(); ii != data.info->vectorTypes.end(); ii++) {
+            out << "    use import " << getWhy3TheoryName(*ii) << endl;
+        }
         if (data.info->usesAlloc) {
             out << "    use import Alloc" << endl;
         }
@@ -575,6 +585,15 @@ end
                     out << "; ";
                 }
                 out << "}";
+            } else if (operand->getType()->isVectorTy()) {
+                Constant* value = cast<ConstantAggregateZero>(operand)->getSequentialElement();
+                
+                out << getWhy3TheoryName(operand->getType()) << ".any_vector";
+                for (unsigned i = 0; i < operand->getType()->getVectorNumElements(); i++) {
+                    out << "[" << i << " <- ";
+                    addOperand(out, module, value, func);
+                    out << "]";
+                }
             } else {
                 throw type_exception("Instantiation of aggregate zero of type '" + LogicTypeLLVM(operand->getType()).toString() + "' currently unsupported");
             }
@@ -592,7 +611,25 @@ end
             }
             
             out << ")";
-        } else { // Else, if it is a local variable...
+        } else if (isa<ConstantVector>(operand)) {
+            ConstantVector* cc = cast<ConstantVector>(operand);
+            out << getWhy3TheoryName(operand->getType()) << ".any_vector";
+            for (unsigned i = 0; i < cc->getNumOperands(); i++) {
+                out << "[" << i << " <- ";
+                addOperand(out, module, cc->getOperand(i), func);
+                out << "]";
+            }
+        } else if (isa<ConstantDataVector>(operand)) {
+            // data vectors are just another vector constant
+            ConstantDataVector* cc = cast<ConstantDataVector>(operand);
+            out << getWhy3TheoryName(operand->getType()) << ".any_vector";
+            for (unsigned i = 0; i < cc->getNumElements(); i++) {
+                out << "[" << i << " <- ";
+                addOperand(out, module, cc->getElementAsConstant(i), func);
+                out << "]";
+            }
+        } else {
+            // Else, if it is a local variable...
             out << getWhy3VarName(operand);
         }
     }
@@ -634,6 +671,17 @@ end
             case Instruction::CastOps::SIToFP: {
                 out << "    use import floating_point.Rounding" << endl;
                 out << "    use import real.FromInt" << endl;
+                break;
+            }
+            case Instruction::CastOps::PtrToInt:
+            case Instruction::CastOps::IntToPtr: {
+                unsigned ptrBits = func->getModule()->rawIR()->getDataLayout().getPointerSizeInBits(0); // TODO: address spaces...
+                Type* ptrIntType = IntegerType::get(func->getModule()->rawIR()->getContext(), ptrBits);
+                if (inst->getType()->isVectorTy()) {
+                    ptrIntType = VectorType::get(ptrIntType, inst->getType()->getVectorNumElements());
+                }
+                
+                out << "    use import " << getWhy3TheoryName(ptrIntType) << endl;
                 break;
             }
             case Instruction::MemoryOps::GetElementPtr:
@@ -822,82 +870,152 @@ end
                 addOperand(out, func->getModule(), inst, func);
                 out << " = (" << getWhy3TheoryName(inst->getType()) << ".lsl ";
                 addOperand(out, func->getModule(), inst->getOperand(0), func);
-                out << " (to_uint ";
+                if (!inst->getType()->isVectorTy()) out << " (to_uint ";
                 addOperand(out, func->getModule(), inst->getOperand(1), func);
-                out << "))";
+                if (!inst->getType()->isVectorTy()) out << ")";
+                out << ")";
                 break;
             }
             case Instruction::BinaryOps::LShr: {
                 addOperand(out, func->getModule(), inst, func);
                 out << " = (" << getWhy3TheoryName(inst->getType()) << ".lsr ";
                 addOperand(out, func->getModule(), inst->getOperand(0), func);
-                out << " (to_uint ";
+                if (!inst->getType()->isVectorTy()) out << " (to_uint ";
                 addOperand(out, func->getModule(), inst->getOperand(1), func);
-                out << "))";
+                if (!inst->getType()->isVectorTy()) out << ")";
+                out << ")";
                 break;
             }
             case Instruction::BinaryOps::AShr: {
                 addOperand(out, func->getModule(), inst, func);
                 out << " = (" << getWhy3TheoryName(inst->getType()) << ".asr ";
                 addOperand(out, func->getModule(), inst->getOperand(0), func);
-                out << " (to_uint ";
+                if (!inst->getType()->isVectorTy()) out << " (to_uint ";
                 addOperand(out, func->getModule(), inst->getOperand(1), func);
-                out << "))";
+                if (!inst->getType()->isVectorTy()) out << ")";
+                out << ")";
                 break;
             }
             case Instruction::CastOps::Trunc: {
                 addOperand(out, func->getModule(), inst, func);
-                out << " = (" << getWhy3TheoryName(inst->getType()) << ".of_int (mod (" << getWhy3TheoryName(inst->getOperand(0)->getType()) << ".to_uint ";
-                addOperand(out, func->getModule(), inst->getOperand(0), func);
-                out << ") 0b1";
-                for (unsigned i = 0; i < inst->getType()->getIntegerBitWidth(); i++) {
-                    out << "0";
+                if (inst->getType()->isVectorTy()) {
+                    out << " = " << getWhy3TheoryName(inst->getType()) << ".any_vector";
+                    for (unsigned i = 0; i < inst->getType()->getVectorNumElements(); i++) {
+                        out << "[" << i << " <- (" << getWhy3TheoryName(inst->getType()->getVectorElementType()) << ".of_int (mod (" << getWhy3TheoryName(inst->getOperand(0)->getType()->getVectorElementType()) << ".to_uint ";
+                        addOperand(out, func->getModule(), inst->getOperand(0), func);
+                        out << "[" << i << "]) 0b1";
+                        for (unsigned j = 0; j < inst->getType()->getVectorElementType()->getIntegerBitWidth(); j++) {
+                            out << "0";
+                        }
+                        out << "))]";
+                    }
+                } else {
+                    out << " = (" << getWhy3TheoryName(inst->getType()) << ".of_int (mod (" << getWhy3TheoryName(inst->getOperand(0)->getType()) << ".to_uint ";
+                    addOperand(out, func->getModule(), inst->getOperand(0), func);
+                    out << ") 0b1";
+                    for (unsigned i = 0; i < inst->getType()->getIntegerBitWidth(); i++) {
+                        out << "0";
+                    }
+                    out << "))";
                 }
-                out << "))";
                 break;
             }
             case Instruction::CastOps::ZExt: {
                 addOperand(out, func->getModule(), inst, func);
-                out << " = (" << getWhy3TheoryName(inst->getType()) << ".of_int (" << getWhy3TheoryName(inst->getOperand(0)->getType()) << ".to_uint ";
-                addOperand(out, func->getModule(), inst->getOperand(0), func);
-                out << "))";
+                if (inst->getType()->isVectorTy()) {
+                    out << " = " << getWhy3TheoryName(inst->getType()) << ".any_vector ";
+                    for (unsigned i = 0; i < inst->getType()->getVectorNumElements(); i++) {
+                        out << "[" << i << " <- (" << getWhy3TheoryName(inst->getType()->getVectorElementType()) << ".of_int (" << getWhy3TheoryName(inst->getOperand(0)->getType()->getVectorElementType()) << ".to_uint ";
+                        addOperand(out, func->getModule(), inst->getOperand(0), func);
+                        out << "[" << i << "]))]";
+                    }
+                } else {
+                    out << " = (" << getWhy3TheoryName(inst->getType()) << ".of_int (" << getWhy3TheoryName(inst->getOperand(0)->getType()) << ".to_uint ";
+                    addOperand(out, func->getModule(), inst->getOperand(0), func);
+                    out << "))";
+                }
                 break;
             }
             case Instruction::CastOps::SExt: {
                 addOperand(out, func->getModule(), inst, func);
-                out << " = (" << getWhy3TheoryName(inst->getType()) << ".of_int (" << getWhy3TheoryName(inst->getOperand(0)->getType()) << ".to_int ";
-                addOperand(out, func->getModule(), inst->getOperand(0), func);
-                out << "))";
+                if (inst->getType()->isVectorTy()) {
+                    out << " = " << getWhy3TheoryName(inst->getType()) << ".any_vector ";
+                    for (unsigned i = 0; i < inst->getType()->getVectorNumElements(); i++) {
+                        out << "[" << i << " <- (" << getWhy3TheoryName(inst->getType()->getVectorElementType()) << ".of_int (" << getWhy3TheoryName(inst->getOperand(0)->getType()->getVectorElementType()) << ".to_int ";
+                        addOperand(out, func->getModule(), inst->getOperand(0), func);
+                        out << "[" << i << "]))]";
+                    }
+                } else {
+                    out << " = (" << getWhy3TheoryName(inst->getType()) << ".of_int (" << getWhy3TheoryName(inst->getOperand(0)->getType()) << ".to_int ";
+                    addOperand(out, func->getModule(), inst->getOperand(0), func);
+                    out << "))";
+                }
                 break;
             }
             case Instruction::CastOps::FPTrunc:
             case Instruction::CastOps::FPExt: {
                 addOperand(out, func->getModule(), inst, func);
-                out << " = (" << getWhy3TheoryName(inst->getType()) << ".of_real Rounding.NearestTiesToEven (" << getWhy3TheoryName(inst->getOperand(0)->getType()) << ".to_real Rounding.NearestTiesToEven ";
-                addOperand(out, func->getModule(), inst->getOperand(0), func);
-                out << "))";
+                if (inst->getType()->isVectorTy()) {
+                    out << " = " << getWhy3TheoryName(inst->getType()) << ".any_vector ";
+                    for (unsigned i = 0; i < inst->getType()->getVectorNumElements(); i++) {
+                        out << "[" << i << " <- (" << getWhy3TheoryName(inst->getType()->getVectorElementType()) << ".of_real Rounding.NearestTiesToEven (" << getWhy3TheoryName(inst->getOperand(0)->getType()->getVectorElementType()) << ".to_real Rounding.NearestTiesToEven ";
+                        addOperand(out, func->getModule(), inst->getOperand(0), func);
+                        out << "[" << i << "]))]";
+                    }
+                } else {
+                    out << " = (" << getWhy3TheoryName(inst->getType()) << ".of_real Rounding.NearestTiesToEven (" << getWhy3TheoryName(inst->getOperand(0)->getType()) << ".to_real Rounding.NearestTiesToEven ";
+                    addOperand(out, func->getModule(), inst->getOperand(0), func);
+                    out << "))";
+                }
                 break;
             }
             case Instruction::CastOps::FPToUI:
             case Instruction::CastOps::FPToSI: {
                 addOperand(out, func->getModule(), inst, func);
-                out << " = (" << getWhy3TheoryName(inst->getType()) << ".of_int (truncate (" << getWhy3TheoryName(inst->getOperand(0)->getType()) << ".to_real Rounding.NearestTiesToEven ";
-                addOperand(out, func->getModule(), inst->getOperand(0), func);
-                out << ")))";
+                if (inst->getType()->isVectorTy()) {
+                    out << " = " << getWhy3TheoryName(inst->getType()) << ".any_vector";
+                    for (unsigned i = 0; i < inst->getType()->getVectorNumElements(); i++) {
+                        out << "[" << i << " <- (" << getWhy3TheoryName(inst->getType()->getVectorElementType()) << ".of_int (truncate (" << getWhy3TheoryName(inst->getOperand(0)->getType()->getVectorElementType()) << ".to_real Rounding.NearestTiesToEven ";
+                        addOperand(out, func->getModule(), inst->getOperand(0), func);
+                        out << "[" << i << "])))]";
+                    }
+                } else {
+                    out << " = (" << getWhy3TheoryName(inst->getType()) << ".of_int (truncate (" << getWhy3TheoryName(inst->getOperand(0)->getType()) << ".to_real Rounding.NearestTiesToEven ";
+                    addOperand(out, func->getModule(), inst->getOperand(0), func);
+                    out << ")))";
+                }
                 break;
             }
             case Instruction::CastOps::UIToFP: {
                 addOperand(out, func->getModule(), inst, func);
-                out << " = (" << getWhy3TheoryName(inst->getType()) << ".of_real Rounding.NearestTiesToEven (from_int (" << getWhy3TheoryName(inst->getOperand(0)->getType()) << ".to_uint ";
-                addOperand(out, func->getModule(), inst->getOperand(0), func);
-                out << ")))";
+                if (inst->getType()->isVectorTy()) {
+                    out << " = " << getWhy3TheoryName(inst->getType()) << ".any_vector";
+                    for (unsigned i = 0; i < inst->getType()->getVectorNumElements(); i++) {
+                        out << "[" << i << " <- (" << getWhy3TheoryName(inst->getType()->getVectorElementType()) << ".of_real Rounding.NearestTiesToEven (from_int (" << getWhy3TheoryName(inst->getOperand(0)->getType()->getVectorElementType()) << ".to_uint ";
+                        addOperand(out, func->getModule(), inst->getOperand(0), func);
+                        out << "[" << i << "])))]";
+                    }
+                } else {
+                    out << " = (" << getWhy3TheoryName(inst->getType()) << ".of_real Rounding.NearestTiesToEven (from_int (" << getWhy3TheoryName(inst->getOperand(0)->getType()) << ".to_uint ";
+                    addOperand(out, func->getModule(), inst->getOperand(0), func);
+                    out << ")))";
+                }
                 break;
             }
             case Instruction::CastOps::SIToFP: {
                 addOperand(out, func->getModule(), inst, func);
-                out << " = (" << getWhy3TheoryName(inst->getType()) << ".of_real Rounding.NearestTiesToEven (from_int (" << getWhy3TheoryName(inst->getOperand(0)->getType()) << ".to_int ";
-                addOperand(out, func->getModule(), inst->getOperand(0), func);
-                out << ")))";
+                if (inst->getType()->isVectorTy()) {
+                    out << " = " << getWhy3TheoryName(inst->getType()) << ".any_vector";
+                    for (unsigned i = 0; i < inst->getType()->getVectorNumElements(); i++) {
+                        out << "[" << i << " <- (" << getWhy3TheoryName(inst->getType()->getVectorElementType()) << ".of_real Rounding.NearestTiesToEven (from_int (" << getWhy3TheoryName(inst->getOperand(0)->getType()->getVectorElementType()) << ".to_int ";
+                        addOperand(out, func->getModule(), inst->getOperand(0), func);
+                        out << "[" << i << "])))]";
+                    }
+                } else {
+                    out << " = (" << getWhy3TheoryName(inst->getType()) << ".of_real Rounding.NearestTiesToEven (from_int (" << getWhy3TheoryName(inst->getOperand(0)->getType()) << ".to_int ";
+                    addOperand(out, func->getModule(), inst->getOperand(0), func);
+                    out << ")))";
+                }
                 break;
             }
             case Instruction::CastOps::PtrToInt: {
@@ -906,18 +1024,37 @@ end
                 addOperand(out, func->getModule(), inst, func);
                 out << " = ";
                 
-                if (inst->getType()->getIntegerBitWidth() != ptrBits) {
-                    Type* ptrIntType = IntegerType::get(func->getModule()->rawIR()->getContext(), ptrBits);
+                if (inst->getType()->isVectorTy()) {
+                    out << getWhy3TheoryName(inst->getType()) << ".any_vector";
+                    for (unsigned i = 0; i < inst->getType()->getVectorNumElements(); i++) {
+                        out << "[" << i << " <- ";
+                        if (inst->getType()->getVectorElementType()->getIntegerBitWidth() != ptrBits) {
+                            Type* ptrIntType = IntegerType::get(func->getModule()->rawIR()->getContext(), ptrBits);
+                            out << "(" << getWhy3TheoryName(inst->getType()->getVectorElementType()) << ".of_int (" << getWhy3TheoryName(ptrIntType) << ".to_uint ";
+                        }
+                        
+                        out << "(" << getWhy3TheoryName(inst->getOperand(0)->getType()->getVectorElementType()) << ".to_ptrint ";
+                        addOperand(out, func->getModule(), inst->getOperand(0), func);
+                        out << "[" << i << "])";
+                        
+                        if (inst->getType()->getIntegerBitWidth() != ptrBits) {
+                            out << "))";
+                        }
+                        out << "]";
+                    }
+                } else {
+                    if (inst->getType()->getIntegerBitWidth() != ptrBits) {
+                        Type* ptrIntType = IntegerType::get(func->getModule()->rawIR()->getContext(), ptrBits);
+                        out << "(" << getWhy3TheoryName(inst->getType()) << ".of_int (" << getWhy3TheoryName(ptrIntType) << ".to_uint ";
+                    }
                     
-                    out << "(" << getWhy3TheoryName(inst->getType()) << ".of_int (" << getWhy3TheoryName(ptrIntType) << ".to_uint ";
-                }
-                
-                out << "(" << getWhy3TheoryName(inst->getOperand(0)->getType()) << ".to_ptrint ";
-                addOperand(out, func->getModule(), inst->getOperand(0), func);
-                out << ")";
-                
-                if (inst->getType()->getIntegerBitWidth() != ptrBits) {
-                    out << "))";
+                    out << "(" << getWhy3TheoryName(inst->getOperand(0)->getType()) << ".to_ptrint ";
+                    addOperand(out, func->getModule(), inst->getOperand(0), func);
+                    out << ")";
+                    
+                    if (inst->getType()->getIntegerBitWidth() != ptrBits) {
+                        out << "))";
+                    }
                 }
                 
                 break;
@@ -926,21 +1063,42 @@ end
                 unsigned ptrBits = func->getModule()->rawIR()->getDataLayout().getPointerSizeInBits(0); // TODO: address spaces...
                 
                 addOperand(out, func->getModule(), inst, func);
-                out << " = (" << getWhy3TheoryName(inst->getType()) << ".of_ptrint ";
-                
-                if (inst->getOperand(0)->getType()->getIntegerBitWidth() != ptrBits) {
-                    Type* ptrIntType = IntegerType::get(func->getModule()->rawIR()->getContext(), ptrBits);
+                if (inst->getType()->isVectorTy()) {
+                    out << " = " << getWhy3TheoryName(inst->getType()) << ".any_vector";
+                    for (unsigned i = 0; i < inst->getType()->getVectorNumElements(); i++) {
+                        out << "[" << i << " <- ";
+                        
+                        out << "(" << getWhy3TheoryName(inst->getType()->getVectorElementType()) << ".of_ptrint ";
+                        
+                        if (inst->getOperand(0)->getType()->getVectorElementType()->getIntegerBitWidth() != ptrBits) {
+                            Type* ptrIntType = IntegerType::get(func->getModule()->rawIR()->getContext(), ptrBits);
+                            out << "(" << getWhy3TheoryName(ptrIntType) << ".of_int (" << getWhy3TheoryName(inst->getOperand(0)->getType()->getVectorElementType()) << ".to_uint ";
+                        }
+                        
+                        addOperand(out, func->getModule(), inst->getOperand(0), func);
+                        out << "[" << i << "])";
+                        
+                        if (inst->getOperand(0)->getType()->getVectorElementType()->getIntegerBitWidth() != ptrBits) {
+                            out << "))";
+                        }
+                        out << "]";
+                    }
+                } else {
+                    out << " = (" << getWhy3TheoryName(inst->getType()) << ".of_ptrint ";
                     
-                    out << "(" << getWhy3TheoryName(ptrIntType) << ".of_int (" << getWhy3TheoryName(inst->getOperand(0)->getType()) << ".to_uint ";
+                    if (inst->getOperand(0)->getType()->getIntegerBitWidth() != ptrBits) {
+                        Type* ptrIntType = IntegerType::get(func->getModule()->rawIR()->getContext(), ptrBits);
+                        out << "(" << getWhy3TheoryName(ptrIntType) << ".of_int (" << getWhy3TheoryName(inst->getOperand(0)->getType()) << ".to_uint ";
+                    }
+                    
+                    addOperand(out, func->getModule(), inst->getOperand(0), func);
+                    
+                    if (inst->getOperand(0)->getType()->getIntegerBitWidth() != ptrBits) {
+                        out << "))";
+                    }
+                    
+                    out << ")";
                 }
-                
-                addOperand(out, func->getModule(), inst->getOperand(0), func);
-                
-                if (inst->getOperand(0)->getType()->getIntegerBitWidth() != ptrBits) {
-                    out << "))";
-                }
-                
-                out << ")";
                 break;
             }
             case Instruction::CastOps::BitCast: {
@@ -982,35 +1140,134 @@ end
             case Instruction::MemoryOps::GetElementPtr: {
                 GetElementPtrInst* gepInst = cast<GetElementPtrInst>(inst);
                 addOperand(out, func->getModule(), inst, func);
-                out << " = (cast (" << getWhy3TheoryName(gepInst->getPointerOperand()->getType()) << ".offset_pointer ";
-                addOperand(out, func->getModule(), gepInst->getPointerOperand(), func);
-                out << " (";
-                Type* currentType = gepInst->getPointerOperandType();
-                if (gepInst->getNumIndices() == 0) {
-                    out << "0";
-                }
-                for (GetElementPtrInst::op_iterator ii = gepInst->idx_begin(); ii != gepInst->idx_end(); ii++) {
-                    if (ii != gepInst->idx_begin()) {
-                        out << " + ";
+                if (inst->getType()->isVectorTy()) {
+                    out << " = " << getWhy3TheoryName(inst->getType()) << ".any_vector";
+                    for (unsigned i = 0; i < inst->getType()->getVectorNumElements(); i++) {
+                        out << "[" << i << " <- (cast (" << getWhy3TheoryName(gepInst->getPointerOperandType()->isVectorTy() ? gepInst->getPointerOperandType()->getVectorElementType() : gepInst->getPointerOperandType()) << ".offset_pointer ";
+                        addOperand(out, func->getModule(), gepInst->getPointerOperand(), func);
+                        if (gepInst->getPointerOperandType()->isVectorTy()) out << "[" << i << "]";
+                        out << " (";
+                        Type* currentType = gepInst->getPointerOperandType()->isVectorTy() ? gepInst->getPointerOperandType()->getVectorElementType() : gepInst->getPointerOperandType();
+                        if (gepInst->getNumIndices() == 0) {
+                            out << "0";
+                        }
+                        for (GetElementPtrInst::op_iterator ii = gepInst->idx_begin(); ii != gepInst->idx_end(); ii++) {
+                            if (ii != gepInst->idx_begin()) {
+                                out << " + ";
+                            }
+                            if (currentType->isPointerTy()) {
+                                out << "(" << getWhy3TheoryName(currentType) << ".size * (" << getWhy3TheoryName(ii->get()->getType()->isVectorTy() ? ii->get()->getType()->getVectorElementType() : ii->get()->getType()) << ".to_int ";
+                                addOperand(out, func->getModule(), ii->get(), func);
+                                if (ii->get()->getType()->isVectorTy()) out << "[" << i << "]";
+                                out << "))";
+                                currentType = currentType->getPointerElementType();
+                            } else if (currentType->isArrayTy()) {
+                                out << "(" << getWhy3TheoryName(currentType->getArrayElementType()) << ".size * (" << getWhy3TheoryName(ii->get()->getType()->isVectorTy() ? ii->get()->getType()->getVectorElementType() : ii->get()->getType()) << ".to_int ";
+                                addOperand(out, func->getModule(), ii->get(), func);
+                                if (ii->get()->getType()->isVectorTy()) out << "[" << i << "]";
+                                out << "))";
+                                currentType = currentType->getArrayElementType();
+                            } else if (currentType->isStructTy()) {
+                                unsigned index = cast<ConstantDataVector>(ii->get())->getElementAsInteger(i);
+                                unsigned offset = func->getModule()->rawIR()->getDataLayout().getStructLayout(cast<StructType>(currentType))->getElementOffsetInBits(index);
+                                out << offset;
+                                currentType = currentType->getStructElementType(index);
+                            } else if (currentType->isVectorTy()) {
+                                out << "(" << getWhy3TheoryName(currentType->getVectorElementType()) << ".size * (" << getWhy3TheoryName(ii->get()->getType()->isVectorTy() ? ii->get()->getType()->getVectorElementType() : ii->get()->getType()) << ".to_int ";
+                                addOperand(out, func->getModule(), ii->get(), func);
+                                if (ii->get()->getType()->isVectorTy()) out << "[" << i << "]";
+                                out << "))";
+                                currentType = currentType->getVectorElementType();
+                            } else {
+                                throw whyr_exception("Internal error: Unknown index type to GEP instruction: " + LogicTypeLLVM(currentType).toString(), NULL, new NodeSource(func, inst));
+                            }
+                        }
+                        out << ")))]";
                     }
-                    if (currentType->isPointerTy()) {
-                        out << "(" << getWhy3TheoryName(currentType) << ".size * (" << getWhy3TheoryName(ii->get()->getType()) << ".to_int ";
-                        addOperand(out, func->getModule(), ii->get(), func);
-                        out << "))";
-                        currentType = currentType->getPointerElementType();
-                    } else if (currentType->isArrayTy()) {
-                        out << "(" << getWhy3TheoryName(currentType->getArrayElementType()) << ".size * (" << getWhy3TheoryName(ii->get()->getType()) << ".to_int ";
-                        addOperand(out, func->getModule(), ii->get(), func);
-                        out << "))";
-                        currentType = currentType->getArrayElementType();
-                    } else if (currentType->isStructTy()) {
-                        unsigned index = cast<ConstantInt>(ii->get())->getLimitedValue();
-                        unsigned offset = func->getModule()->rawIR()->getDataLayout().getStructLayout(cast<StructType>(currentType))->getElementOffsetInBits(index);
-                        out << offset;
-                        currentType = currentType->getStructElementType(index);
+                } else {
+                    out << " = (cast (" << getWhy3TheoryName(gepInst->getPointerOperand()->getType()) << ".offset_pointer ";
+                    addOperand(out, func->getModule(), gepInst->getPointerOperand(), func);
+                    out << " (";
+                    Type* currentType = gepInst->getPointerOperandType();
+                    if (gepInst->getNumIndices() == 0) {
+                        out << "0";
+                    }
+                    for (GetElementPtrInst::op_iterator ii = gepInst->idx_begin(); ii != gepInst->idx_end(); ii++) {
+                        if (ii != gepInst->idx_begin()) {
+                            out << " + ";
+                        }
+                        if (currentType->isPointerTy()) {
+                            out << "(" << getWhy3TheoryName(currentType) << ".size * (" << getWhy3TheoryName(ii->get()->getType()) << ".to_int ";
+                            addOperand(out, func->getModule(), ii->get(), func);
+                            out << "))";
+                            currentType = currentType->getPointerElementType();
+                        } else if (currentType->isArrayTy()) {
+                            out << "(" << getWhy3TheoryName(currentType->getArrayElementType()) << ".size * (" << getWhy3TheoryName(ii->get()->getType()) << ".to_int ";
+                            addOperand(out, func->getModule(), ii->get(), func);
+                            out << "))";
+                            currentType = currentType->getArrayElementType();
+                        } else if (currentType->isStructTy()) {
+                            unsigned index = cast<ConstantInt>(ii->get())->getLimitedValue();
+                            unsigned offset = func->getModule()->rawIR()->getDataLayout().getStructLayout(cast<StructType>(currentType))->getElementOffsetInBits(index);
+                            out << offset;
+                            currentType = currentType->getStructElementType(index);
+                        } else if (currentType->isVectorTy()) {
+                            out << "(" << getWhy3TheoryName(currentType->getVectorElementType()) << ".size * (" << getWhy3TheoryName(ii->get()->getType()) << ".to_int ";
+                            addOperand(out, func->getModule(), ii->get(), func);
+                            out << "))";
+                            currentType = currentType->getVectorElementType();
+                        } else {
+                            throw whyr_exception("Internal error: Unknown index type to GEP instruction", NULL, new NodeSource(func, inst));
+                        }
+                    }
+                    out << ")))";
+                }
+                break;
+            }
+            case Instruction::OtherOps::ExtractElement: {
+                addOperand(out, func->getModule(), inst, func);
+                out << " = ";
+                addOperand(out, func->getModule(), inst->getOperand(0), func);
+                out << "[(" << getWhy3TheoryName(inst->getOperand(1)->getType()) << ".to_uint ";
+                addOperand(out, func->getModule(), inst->getOperand(1), func);
+                out << ")]";
+                break;
+            }
+            case Instruction::OtherOps::InsertElement: {
+                addOperand(out, func->getModule(), inst, func);
+                out << " = ";
+                addOperand(out, func->getModule(), inst->getOperand(0), func);
+                out << "[(" << getWhy3TheoryName(inst->getOperand(2)->getType()) << ".to_uint ";
+                addOperand(out, func->getModule(), inst->getOperand(2), func);
+                out << ") <- (" << getWhy3TheoryName(inst->getOperand(1)->getType()) << ".to_uint ";
+                addOperand(out, func->getModule(), inst->getOperand(1), func);
+                out << ")]";
+                break;
+            }
+            case Instruction::OtherOps::ShuffleVector: {
+                ShuffleVectorInst* shufInst = cast<ShuffleVectorInst>(inst);
+                
+                addOperand(out, func->getModule(), inst, func);
+                out << " = ";
+                out << getWhy3TheoryName(inst->getType()) << ".any_vector";
+                
+                int size_arg1 = shufInst->getOperand(0)->getType()->getVectorNumElements();
+                for (unsigned i = 0; i < inst->getType()->getVectorNumElements(); i++) {
+                    int mask = shufInst->getMaskValue(i);
+                    if (mask >= 0) { // if the mask is undef (-1), skip it
+                        Value* vec;
+                        if (mask < size_arg1) {
+                            vec = shufInst->getOperand(0);
+                        } else {
+                            vec = shufInst->getOperand(1);
+                            mask -= size_arg1;
+                        }
+                        
+                        out << "[" << i << " <- ";
+                        addOperand(out, func->getModule(), vec, func);
+                        out << "[" << mask << "]]";
                     }
                 }
-                out << ")))";
                 break;
             }
             case Instruction::OtherOps::ExtractValue: {
@@ -1085,7 +1342,7 @@ end
                 ICmpInst* icmpInst = cast<ICmpInst>(inst);
                 
                 addOperand(out, func->getModule(), inst, func);
-                out << " = if (";
+                out << " = ";
                 string opStr;
                 if (icmpInst->getPredicate() == llvm::ICmpInst::ICMP_EQ || icmpInst->getPredicate() == llvm::ICmpInst::ICMP_NE) {
                     switch (icmpInst->getPredicate()) {
@@ -1102,9 +1359,38 @@ end
                         }
                     }
                     
-                    addOperand(out, func->getModule(), icmpInst->getOperand(0), func);
-                    out << opStr;
-                    addOperand(out, func->getModule(), icmpInst->getOperand(1), func);
+                    if (inst->getType()->isVectorTy()) {
+                        out << getWhy3TheoryName(inst->getType()) << ".any_vector";
+                        for (unsigned i = 0; i < inst->getType()->getVectorNumElements(); i++) {
+                            out << "[" << i << " <- ";
+                            
+                            out << "if (";
+                            
+                            addOperand(out, func->getModule(), icmpInst->getOperand(0), func);
+                            out << "[" << i << "]";
+                            out << opStr;
+                            addOperand(out, func->getModule(), icmpInst->getOperand(1), func);
+                            out << "[" << i << "]";
+                            
+                            out << ") then ";
+                            addLLVMIntConstant(out, func->getModule(), icmpInst->getType()->getVectorElementType(), "1");
+                            out << " else ";
+                            addLLVMIntConstant(out, func->getModule(), icmpInst->getType()->getVectorElementType(), "0");
+                            
+                            out << "]";
+                        }
+                    } else {
+                        out << "if (";
+                        
+                        addOperand(out, func->getModule(), icmpInst->getOperand(0), func);
+                        out << opStr;
+                        addOperand(out, func->getModule(), icmpInst->getOperand(1), func);
+                        
+                        out << ") then ";
+                        addLLVMIntConstant(out, func->getModule(), icmpInst->getType(), "1");
+                        out << " else ";
+                        addLLVMIntConstant(out, func->getModule(), icmpInst->getType(), "0");
+                    }
                 } else {
                     switch (icmpInst->getPredicate()) {
                         case llvm::ICmpInst::ICMP_SGT: {
@@ -1144,15 +1430,41 @@ end
                         }
                     }
                     
-                    out << getWhy3TheoryName(icmpInst->getOperand(0)->getType()) << "." << opStr << " ";
-                    addOperand(out, func->getModule(), icmpInst->getOperand(0), func);
-                    out << " ";
-                    addOperand(out, func->getModule(), icmpInst->getOperand(1), func);
+                    if (inst->getType()->isVectorTy()) {
+                        out << getWhy3TheoryName(inst->getType()) << ".any_vector";
+                        for (unsigned i = 0; i < inst->getType()->getVectorNumElements(); i++) {
+                            out << "[" << i << " <- ";
+                            
+                            out << "if (";
+                            
+                            out << getWhy3TheoryName(icmpInst->getOperand(0)->getType()->getVectorElementType()) << "." << opStr << " ";
+                            addOperand(out, func->getModule(), icmpInst->getOperand(0), func);
+                            out << "[" << i << "]";
+                            out << " ";
+                            addOperand(out, func->getModule(), icmpInst->getOperand(1), func);
+                            out << "[" << i << "]";
+                            
+                            out << ") then ";
+                            addLLVMIntConstant(out, func->getModule(), icmpInst->getType()->getVectorElementType(), "1");
+                            out << " else ";
+                            addLLVMIntConstant(out, func->getModule(), icmpInst->getType()->getVectorElementType(), "0");
+                            
+                            out << "]";
+                        }
+                    } else {
+                        out << "if (";
+                        
+                        out << getWhy3TheoryName(icmpInst->getOperand(0)->getType()) << "." << opStr << " ";
+                        addOperand(out, func->getModule(), icmpInst->getOperand(0), func);
+                        out << " ";
+                        addOperand(out, func->getModule(), icmpInst->getOperand(1), func);
+                        
+                        out << ") then ";
+                        addLLVMIntConstant(out, func->getModule(), icmpInst->getType(), "1");
+                        out << " else ";
+                        addLLVMIntConstant(out, func->getModule(), icmpInst->getType(), "0");
+                    }
                 }
-                out << ") then ";
-                addLLVMIntConstant(out, func->getModule(), icmpInst->getType(), "1");
-                out << " else ";
-                addLLVMIntConstant(out, func->getModule(), icmpInst->getType(), "0");
                 break;
             }
             case Instruction::OtherOps::FCmp: {
@@ -1160,69 +1472,86 @@ end
                 
                 addOperand(out, func->getModule(), inst, func);
                 if (fcmpInst->getPredicate() == FCmpInst::FCMP_FALSE) {
-                    out << " = ";
-                    addLLVMIntConstant(out, func->getModule(), fcmpInst->getType(), "0");
+                    if (inst->getType()->isVectorTy()) {
+                        out << " = " << getWhy3TheoryName(inst->getType()) << ".any_vector";
+                        for (unsigned i = 0; i < inst->getType()->getVectorNumElements(); i++) {
+                            out << "[" << i << " <- ";
+                            addLLVMIntConstant(out, func->getModule(), fcmpInst->getType()->getVectorElementType(), "0");
+                            out << "]";
+                        }
+                    } else {
+                        out << " = ";
+                        addLLVMIntConstant(out, func->getModule(), fcmpInst->getType(), "0");
+                    }
                 } else if (fcmpInst->getPredicate() == FCmpInst::FCMP_TRUE) {
-                    out << " = ";
-                    addLLVMIntConstant(out, func->getModule(), fcmpInst->getType(), "1");
+                    if (inst->getType()->isVectorTy()) {
+                        out << " = " << getWhy3TheoryName(inst->getType()) << ".any_vector";
+                        for (unsigned i = 0; i < inst->getType()->getVectorNumElements(); i++) {
+                            out << "[" << i << " <- ";
+                            addLLVMIntConstant(out, func->getModule(), fcmpInst->getType()->getVectorElementType(), "1");
+                            out << "]";
+                        }
+                    } else {
+                        out << " = ";
+                        addLLVMIntConstant(out, func->getModule(), fcmpInst->getType(), "1");
+                    }
                 } else {
-                    out << " = if (" << getWhy3TheoryName(fcmpInst->getOperand(0)->getType()) << ".";
-                   
+                    string opStr;
                     switch (fcmpInst->getPredicate()) {
                         case FCmpInst::FCMP_OEQ: {
-                            out << "oeq";
+                            opStr = "oeq";
                             break;
                         }
                         case FCmpInst::FCMP_OGT: {
-                            out << "ogt";
+                            opStr = "ogt";
                             break;
                         }
                         case FCmpInst::FCMP_OGE: {
-                            out << "oge";
+                            opStr = "oge";
                             break;
                         }
                         case FCmpInst::FCMP_OLT: {
-                            out << "olt";
+                            opStr = "olt";
                             break;
                         }
                         case FCmpInst::FCMP_OLE: {
-                            out << "ole";
+                            opStr = "ole";
                             break;
                         }
                         case FCmpInst::FCMP_ONE: {
-                            out << "one";
+                            opStr = "one";
                             break;
                         }
                         case FCmpInst::FCMP_ORD: {
-                            out << "ord";
+                            opStr = "ord";
                             break;
                         }
                         case FCmpInst::FCMP_UEQ: {
-                            out << "ueq";
+                            opStr = "ueq";
                             break;
                         }
                         case FCmpInst::FCMP_UGT: {
-                            out << "ugt";
+                            opStr = "ugt";
                             break;
                         }
                         case FCmpInst::FCMP_UGE: {
-                            out << "uge";
+                            opStr = "uge";
                             break;
                         }
                         case FCmpInst::FCMP_ULT: {
-                            out << "ult";
+                            opStr = "ult";
                             break;
                         }
                         case FCmpInst::FCMP_ULE: {
-                            out << "ule";
+                            opStr = "ule";
                             break;
                         }
                         case FCmpInst::FCMP_UNE: {
-                            out << "une";
+                            opStr = "une";
                             break;
                         }
                         case FCmpInst::FCMP_UNO: {
-                            out << "uno";
+                            opStr = "uno";
                             break;
                         }
                         default: {
@@ -1230,27 +1559,73 @@ end
                         }
                     }
                     
-                    out << " ";
-                    addOperand(out, func->getModule(), fcmpInst->getOperand(0), func);
-                    out << " ";
-                    addOperand(out, func->getModule(), fcmpInst->getOperand(1), func);
-                    out << ") then ";
-                    addLLVMIntConstant(out, func->getModule(), fcmpInst->getType(), "1");
-                    out << " else ";
-                    addLLVMIntConstant(out, func->getModule(), fcmpInst->getType(), "0");
+                    if (inst->getType()->isVectorTy()) {
+                        out << " = " << getWhy3TheoryName(inst->getType()) << ".any_vector";
+                        for (unsigned i = 0; i < inst->getType()->getVectorNumElements(); i++) {
+                            out << "[" << i << " <- ";
+                            
+                            out << "if (";
+                            
+                            out << getWhy3TheoryName(fcmpInst->getOperand(0)->getType()->getVectorElementType()) << "." << opStr << " ";
+                            addOperand(out, func->getModule(), fcmpInst->getOperand(0), func);
+                            out << "[" << i << "]";
+                            out << " ";
+                            addOperand(out, func->getModule(), fcmpInst->getOperand(1), func);
+                            out << "[" << i << "]";
+                            
+                            out << ") then ";
+                            addLLVMIntConstant(out, func->getModule(), fcmpInst->getType()->getVectorElementType(), "1");
+                            out << " else ";
+                            addLLVMIntConstant(out, func->getModule(), fcmpInst->getType()->getVectorElementType(), "0");
+                            
+                            out << "]";
+                        }
+                    } else {
+                        out << " = if (";
+                        
+                        out << getWhy3TheoryName(fcmpInst->getOperand(0)->getType()) << "." << opStr << " ";
+                        addOperand(out, func->getModule(), fcmpInst->getOperand(0), func);
+                        out << " ";
+                        addOperand(out, func->getModule(), fcmpInst->getOperand(1), func);
+                        
+                        out << ") then ";
+                        addLLVMIntConstant(out, func->getModule(), fcmpInst->getType(), "1");
+                        out << " else ";
+                        addLLVMIntConstant(out, func->getModule(), fcmpInst->getType(), "0");
+                    }
                 }
                 break;
             }
             case Instruction::OtherOps::Select: {
                 addOperand(out, func->getModule(), inst, func);
-                out << " = if ";
-                addOperand(out, func->getModule(), inst->getOperand(0), func);
-                out << " = ";
-                addLLVMIntConstant(out, func->getModule(), inst->getOperand(0)->getType(), "1");
-                out << " then ";
-                addOperand(out, func->getModule(), inst->getOperand(1), func);
-                out <<" else ";
-                addOperand(out, func->getModule(), inst->getOperand(2), func);
+                if (inst->getType()->isVectorTy()) {
+                    out << " = " << getWhy3TheoryName(inst->getType()) << ".any_vector";
+                    for (unsigned i = 0; i < inst->getType()->getVectorNumElements(); i++) {
+                        out << "[" << i << " <- ";
+                        
+                        out << "if ";
+                        addOperand(out, func->getModule(), inst->getOperand(0), func);
+                        out << "[" << i << "] = ";
+                        addLLVMIntConstant(out, func->getModule(), inst->getOperand(0)->getType()->getVectorElementType(), "1");
+                        out << " then ";
+                        addOperand(out, func->getModule(), inst->getOperand(1), func);
+                        out << "[" << i << "]";
+                        out <<" else ";
+                        addOperand(out, func->getModule(), inst->getOperand(2), func);
+                        out << "[" << i << "]";
+                        
+                        out << "]";
+                    }
+                } else {
+                    out << " = if ";
+                    addOperand(out, func->getModule(), inst->getOperand(0), func);
+                    out << " = ";
+                    addLLVMIntConstant(out, func->getModule(), inst->getOperand(0)->getType(), "1");
+                    out << " then ";
+                    addOperand(out, func->getModule(), inst->getOperand(1), func);
+                    out <<" else ";
+                    addOperand(out, func->getModule(), inst->getOperand(2), func);
+                }
                 break;
             }
             case Instruction::OtherOps::Call: {
@@ -1911,6 +2286,84 @@ end
         out << "end" << endl << endl;
     }
     
+    void addCommonVectorType(ostream &out, AnnotatedModule* module) {
+        out << "theory LLVMVector" << endl;
+        out << "    use export map.Map" << endl;
+        out << "    use import int.Int" << endl;
+        
+        out << "    type t" << endl;
+        out << "    type v = (map int t)" << endl;
+        
+        out << "    constant elem_num : int" << endl;
+        out << "    constant size : int" << endl;
+        out << "    constant elem_size : int" << endl;
+        
+        out << "    constant any_vector : v" << endl;
+        out << "end" << endl << endl;
+    }
+    
+    void addVectorType(ostream &out, AnnotatedModule* module, VectorType* type) {
+        out << "theory " << getWhy3TheoryName(type) << endl;
+        out << "    use import " << getWhy3TheoryName(type->getVectorElementType()) << endl;
+        out << "    use import bool.Bool" << endl;
+        out << "    use import int.Int" << endl;
+        
+        out << "    constant elem_num : int = " << type->getVectorNumElements() << endl;
+        out << "    constant size : int = " << getWhy3TheoryName(type->getVectorElementType()) << ".size * elem_num" << endl;
+        out << "    constant elem_size : int = " << getWhy3TheoryName(type->getVectorElementType()) << ".size" << endl;
+        
+        out << "    clone export LLVMVector with" << endl;
+        out << "        constant elem_num = elem_num," << endl;
+        out << "        constant size = size," << endl;
+        out << "        constant elem_size = elem_size," << endl;
+        out << "        type t = " << getWhy3FullName(type->getVectorElementType()) << endl;
+        out << "    type " << getWhy3TypeName(type) << " = v" << endl;
+        
+        // add the vector versions of operators that can be done on the element type
+        if (type->getVectorElementType()->isIntegerTy()) {
+            static const list<string> mathOps({"add","sub","mul","udiv","sdiv","urem","srem", "bw_and", "bw_or", "bw_xor"});
+            for (list<string>::const_iterator ii = mathOps.begin(); ii != mathOps.end(); ii++) {
+                out << "    function " << *ii << " (a:v) (b:v) :v = any_vector";
+                for (unsigned i = 0; i < type->getVectorNumElements(); i++) {
+                    out << "[" << i << " <- (" << getWhy3TheoryName(type->getVectorElementType()) << "." << *ii << " a[" << i << "] b[" << i << "])]";
+                }
+                out << endl;
+            }
+            
+            {
+                out << "    function bw_not (a:v) :v = any_vector";
+                for (unsigned i = 0; i < type->getVectorNumElements(); i++) {
+                    out << "[" << i << " <- (" << getWhy3TheoryName(type->getVectorElementType()) << ".bw_not " << " a[" << i << "])]";
+                }
+                out << endl;
+            }
+            
+            static const list<string> shiftOps({"lsl", "lsr", "asr"});
+            for (list<string>::const_iterator ii = shiftOps.begin(); ii != shiftOps.end(); ii++) {
+                out << "    function " << *ii << " (a:v) (b:v) :v = any_vector";
+                for (unsigned i = 0; i < type->getVectorNumElements(); i++) {
+                    out << "[" << i << " <- (" << getWhy3TheoryName(type->getVectorElementType()) << "." << *ii << " a[" << i << "] (" << getWhy3TheoryName(type->getVectorElementType()) << ".to_uint b[" << i << "]))]";
+                }
+                out << endl;
+            }
+        } else if (type->getVectorElementType()->isFloatingPointTy()) {
+            out << "    use import real.Real" << endl;
+            
+            static const list<string> mathOps({"fadd","fsub","fmul","fdiv","frem"});
+            for (list<string>::const_iterator ii = mathOps.begin(); ii != mathOps.end(); ii++) {
+                out << "    function " << *ii << " (m:Rounding.mode) (a:v) (b:v) :v = any_vector";
+                for (unsigned i = 0; i < type->getVectorNumElements(); i++) {
+                    out << "[" << i << " <- (" << getWhy3TheoryName(type->getVectorElementType()) << "." << *ii << " m a[" << i << "] b[" << i << "])]";
+                }
+                out << endl;
+            }
+        } else if (type->getVectorElementType()->isPointerTy()) {
+            
+        }
+        
+        out << "end" << endl << endl;
+    }
+    
     void addDerivedType(ostream &out, AnnotatedModule* module, Type* type) {
         if (type->isPointerTy()) {
             addPtrType(out, module, cast<PointerType>(type));
@@ -1918,6 +2371,8 @@ end
             addArrayType(out, module, cast<ArrayType>(type));
         } else if (type->isStructTy()) {
             addStructType(out, module, cast<StructType>(type));
+        } else if (type->isVectorTy()) {
+            addVectorType(out, module, cast<VectorType>(type));
         }
     }
     
@@ -2115,6 +2570,7 @@ end
         notSeen.insert(info.ptrTypes.begin(), info.ptrTypes.end());
         notSeen.insert(info.arrayTypes.begin(), info.arrayTypes.end());
         notSeen.insert(info.structTypes.begin(), info.structTypes.end());
+        notSeen.insert(info.vectorTypes.begin(), info.vectorTypes.end());
         
         // while there's still more nodes in need of calculation; that is, if the state changed since last iteration...
         bool changed;
@@ -2140,6 +2596,10 @@ end
                             allSeen = false;
                             break;
                         }
+                    }
+                } else if ((*ii)->isVectorTy()) {
+                    if (notSeen.find((*ii)->getVectorElementType()) != notSeen.end()) {
+                        allSeen = false;
                     }
                 }
                 
@@ -2246,6 +2706,14 @@ end
             info.intTypes.insert(Type::getIntNTy(module->rawIR()->getContext(), module->rawIR()->getDataLayout().getPointerSizeInBits(0))); // TODO: address spaces...
         }
         
+        if (!info.vectorTypes.empty()) {
+            for (unordered_set<VectorType*>::iterator ii = info.vectorTypes.begin(); ii != info.vectorTypes.end(); ii++) {
+                if ((*ii)->getVectorElementType()->isPointerTy()) {
+                    info.vectorTypes.insert(VectorType::get(Type::getIntNTy(module->rawIR()->getContext(), module->rawIR()->getDataLayout().getPointerSizeInBits(0)), (*ii)->getVectorNumElements())); // TODO: address spaces...
+                }
+            }
+        }
+        
         if (!info.intTypes.empty()) {
             addCommonIntType(out, module);
             
@@ -2272,6 +2740,10 @@ end
         
         if (!info.structTypes.empty()) {
             addCommonStructType(out, module);
+        }
+        
+        if (!info.vectorTypes.empty()) {
+            addCommonVectorType(out, module);
         }
         
         list<Type*> types;

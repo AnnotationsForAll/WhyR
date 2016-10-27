@@ -42,6 +42,10 @@ static std::unordered_set<std::string> files_to_prove({
     "ins_ex_arrays.bc",
     "ins_ex_structs.bc",
     "indirectbr.bc",
+    "vectors.bc",
+    "vector_elem_ops.bc",
+    "vector_cmp.bc",
+    "vector_math.bc",
 });
 
 /**

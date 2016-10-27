@@ -1051,6 +1051,44 @@ WarNode war_parse_struct_const(WarNode typeNode, WarNode listNode) {
     return ret;
 }
 
+WarNode war_parse_vector_type(WarNode typeNode, WarNode sizeNode) {
+    using namespace std; using namespace llvm; using namespace whyr;
+    
+    LogicType* logicType = cast<LogicTypeType>(typeNode.expr->returnType())->getType();
+    if (!isa<LogicTypeLLVM>(logicType)) {
+        throw type_exception("Vector types must be made of primitive LLVM types; got a vector of type '" + logicType->toString() + "'", NULL, warParserSource);
+    }
+    Type* baseType = cast<LogicTypeLLVM>(logicType)->getType();
+    if (!VectorType::isValidElementType(baseType)) {
+        throw type_exception("Vector types must be made of primitive LLVM types; got a vector of type '" + logicType->toString() + "'", NULL, warParserSource);
+    }
+    
+    uint64_t elems = strtoull(sizeNode.token, NULL, 0);
+    if (elems == 0) {
+        throw type_exception("Vector types must have a length greater than 0", NULL, warParserSource);
+    }
+    
+    VectorType* type = VectorType::get(baseType, elems);
+    
+    WarNode ret;
+    ret.expr = new LogicExpressionConstantType(new LogicTypeType(new LogicTypeLLVM(type, warParserSource), warParserSource), warParserSource);
+    return ret;
+}
+
+WarNode war_parse_vector_const(WarNode listNode) {
+    using namespace std; using namespace llvm; using namespace whyr;
+    
+    LogicType* baseTypeRaw = listNode.exprs->front()->returnType();
+    if (!isa<LogicTypeLLVM>(baseTypeRaw)) {
+        throw type_exception("Elements of array constant must be an LLVM type, got type '" + baseTypeRaw->toString() + "'", NULL, warParserSource);
+    }
+    LogicTypeLLVM* baseType = cast<LogicTypeLLVM>(baseTypeRaw);
+    
+    WarNode ret;
+    ret.expr = new LogicExpressionLLVMVectorConstant(baseType->getType(), listNode.exprs, warParserSource);
+    return ret;
+}
+
 // ================================
 // End of parser functions.
 // ================================

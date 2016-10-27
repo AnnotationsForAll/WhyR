@@ -67,7 +67,7 @@ namespace whyr {
             case LOGIC_TYPE_LLVM: {
                 // fail only if LLVM type is non-numeric
                 Type* ty = cast<LogicTypeLLVM>(returnType())->getType();
-                if (!(ty->isIntegerTy() || ty->isFloatingPointTy())) {
+                if (!(ty->isIntOrIntVectorTy() || ty->isFPOrFPVectorTy())) {
                     goto non_numeric_type;
                 }
                 break;
@@ -85,7 +85,7 @@ namespace whyr {
         }
         
         // if this is an LLVM int type operator, DIV, MOD, and REM are not defined operators
-        if (isa<LogicTypeLLVM>(returnType()) && cast<LogicTypeLLVM>(returnType())->getType()->isIntegerTy()) {
+        if (isa<LogicTypeLLVM>(returnType()) && cast<LogicTypeLLVM>(returnType())->getType()->isIntOrIntVectorTy()) {
             switch (op) {
                 case LogicExpressionBinaryMath::OP_ADD:
                 case LogicExpressionBinaryMath::OP_SUB:
@@ -198,7 +198,7 @@ namespace whyr {
                 }
                 default: throw whyr_exception(("internal error: Unknown LogicExpressionBinaryMath opcode "+to_string(op)), this);
             }
-        } else if (isa<LogicTypeLLVM>(returnType()) && cast<LogicTypeLLVM>(returnType())->getType()->isIntegerTy()) {
+        } else if (isa<LogicTypeLLVM>(returnType()) && cast<LogicTypeLLVM>(returnType())->getType()->isIntOrIntVectorTy()) {
             // is an integer LLVM type
             out << getWhy3TheoryName(cast<LogicTypeLLVM>(returnType())->getType()) << ".";
             switch (op) {
@@ -225,7 +225,7 @@ namespace whyr {
                 }
                 default: throw whyr_exception(("internal error: Unknown LogicExpressionBinaryMath opcode "+to_string(op)), this);
             }
-        } else if (isa<LogicTypeLLVM>(returnType()) && cast<LogicTypeLLVM>(returnType())->getType()->isFloatingPointTy()) {
+        } else if (isa<LogicTypeLLVM>(returnType()) && cast<LogicTypeLLVM>(returnType())->getType()->isFPOrFPVectorTy()) {
             // is a float type
             data.importsNeeded.insert("floating_point.Rounding");
             out << getWhy3TheoryName(cast<LogicTypeLLVM>(returnType())->getType()) << ".";

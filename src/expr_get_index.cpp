@@ -23,7 +23,7 @@ namespace whyr {
         // we have to type check up here because the retType depends on it
         
         // lhs has to be indexable
-        if (!isa<LogicTypeLLVM>(lhs->returnType()) || !(cast<LogicTypeLLVM>(lhs->returnType())->getType()->isArrayTy() || cast<LogicTypeLLVM>(lhs->returnType())->getType()->isStructTy() || cast<LogicTypeLLVM>(lhs->returnType())->getType()->isPointerTy())) {
+        if (!isa<LogicTypeLLVM>(lhs->returnType()) || !(cast<LogicTypeLLVM>(lhs->returnType())->getType()->isArrayTy() || cast<LogicTypeLLVM>(lhs->returnType())->getType()->isStructTy() || cast<LogicTypeLLVM>(lhs->returnType())->getType()->isPointerTy() || cast<LogicTypeLLVM>(lhs->returnType())->getType()->isVectorTy())) {
             throw type_exception("Operator 'get' expected indexable type; got type '" + lhs->returnType()->toString() + "'", this);
         }
         
@@ -52,6 +52,15 @@ namespace whyr {
                 throw type_exception("Operator 'get' expected index type of 'int'; got type '" + rhs->returnType()->toString() + "'", this);
             } else {
                 retType = new LogicTypeLLVM(cast<LogicTypeLLVM>(lhs->returnType())->getType()->getPointerElementType(), source);
+            }
+        }
+        
+        // if we are a vector type, rhs must be a logical int
+        if (isa<LogicTypeLLVM>(lhs->returnType()) && cast<LogicTypeLLVM>(lhs->returnType())->getType()->isVectorTy()) {
+            if (!isa<LogicTypeInt>(rhs->returnType())) {
+                throw type_exception("Operator 'get' expected index type of 'int'; got type '" + rhs->returnType()->toString() + "'", this);
+            } else {
+                retType = new LogicTypeLLVM(cast<LogicTypeLLVM>(lhs->returnType())->getType()->getVectorElementType(), source);
             }
         }
     }
@@ -99,6 +108,11 @@ namespace whyr {
             out << " (" << getWhy3TheoryName(cast<LogicTypeLLVM>(lhs->returnType())->getType()) << ".elem_size * ";
             rhs->toWhy3(out, data);
             out << ")))";
+        } else if (isa<LogicTypeLLVM>(lhs->returnType()) && cast<LogicTypeLLVM>(lhs->returnType())->getType()->isVectorTy()) {
+            lhs->toWhy3(out, data);
+            out << "[";
+            rhs->toWhy3(out, data);
+            out << "]";
         }
     }
     
