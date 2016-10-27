@@ -1037,7 +1037,7 @@ end
                         addOperand(out, func->getModule(), inst->getOperand(0), func);
                         out << "[" << i << "])";
                         
-                        if (inst->getType()->getIntegerBitWidth() != ptrBits) {
+                        if (inst->getType()->getVectorElementType()->getIntegerBitWidth() != ptrBits) {
                             out << "))";
                         }
                         out << "]";
