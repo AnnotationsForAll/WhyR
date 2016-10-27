@@ -50,6 +50,7 @@ real                                { return TOKEN_TYPE_REAL; }
 float                               { return TOKEN_TYPE_LLVM_FLOAT; }
 double                              { return TOKEN_TYPE_LLVM_DOUBLE; }
 struct                              { return TOKEN_TYPE_STRUCT; }
+vector                              { return TOKEN_TYPE_VECTOR; }
 i[0-9]+                             {
                                         yylval.token = yytext+1;
                                         return TOKEN_TYPE_LLVM_INT;
