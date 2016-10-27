@@ -3,12 +3,12 @@ define i8 @get_elem(i32 %n) !whyr.ensures !{!{!"war", !"%n == (i32)2 ==> result 
     ret i8 %a
 }
 
-define <4 x i8> @set_elem(i32 %n) {
+define <4 x i8> @set_elem(i32 %n) !whyr.ensures !{!{!"war", !"%n == (i32)2 ==> result == (vector){(i8)1,(i8)2,(i8)0,(i8)8}"}} {
     %a = insertelement <4 x i8> <i8 1, i8 2, i8 4, i8 8>, i8 0, i32 %n
     ret <4 x i8> %a
 }
 
-define <4 x i32> @shuffle() {
+define <4 x i32> @shuffle() !whyr.ensures !{!{!"war", !"result[0] == (i32)11 && result[1] == (i32)44 && result[3] == (i32)22"}} {
     %a = shufflevector <2 x i32> <i32 11, i32 22>, <2 x i32> <i32 33, i32 44>, <4 x i32> <i32 0, i32 3, i32 undef, i32 1>
     ret <4 x i32> %a
 }
