@@ -150,6 +150,17 @@ namespace whyr {
                 unsigned offset = data.module->rawIR()->getDataLayout().getStructLayout(cast<StructType>(currentType))->getElementOffsetInBits(index);
                 out << offset;
                 currentType = currentType->getStructElementType(index);
+            } else if (currentType->isVectorTy()) {
+                out << "(" << getWhy3TheoryName(currentType->getVectorElementType()) << ".size * ";
+                if (isa<LogicTypeInt>((*ii)->returnType())) {
+                    (*ii)->toWhy3(out, data);
+                } else {
+                    out << "(" << getWhy3TheoryName(cast<LogicTypeLLVM>((*ii)->returnType())->getType()) << ".to_int ";
+                    (*ii)->toWhy3(out, data);
+                    out << ")";
+                }
+                out << ")";
+                currentType = currentType->getVectorElementType();
             }
         }
         out << "))):(" << getWhy3FullName(cast<LogicTypeLLVM>(retType)->getType()) << "))";
