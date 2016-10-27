@@ -68,7 +68,7 @@ typeid:
     | TOKEN_TYPE_STRUCT '{' type_list '}'           { $$ = war_parse_anon_struct_type(false, $3); }
     | TOKEN_TYPE_STRUCT TOKEN_PACKED_STRUCT_BEGIN type_list TOKEN_PACKED_STRUCT_END
                                                     { $$ = war_parse_anon_struct_type(true , $3); }
-    | TOKEN_TYPE_VECTOR typeid '[' TOKEN_INT ']'    { $$ = war_parse_vector_type($2, $4); }
+    | typeid '[' TOKEN_INT ']' TOKEN_TYPE_VECTOR    { $$ = war_parse_vector_type($1, $3); }
     ;
 cast:
       '(' typeid ')' expr                           %prec PREC_CAST
@@ -92,9 +92,9 @@ cast:
     | '(' typeid ')' TOKEN_TYPE_STRUCT '{' array_item '}'
                                                     %prec PREC_CAST
                                                     { $$ = war_parse_struct_const($2, $6); }
-    | '(' typeid ')' TOKEN_TYPE_VECTOR '{' array_item '}'
+    | '(' TOKEN_TYPE_VECTOR ')' '{' array_item '}'
                                                     %prec PREC_CAST
-                                                    { $$ = war_parse_vector_const($2, $6); }
+                                                    { $$ = war_parse_vector_const($5); }
     ;
 declare_item:
         typeid TOKEN_VAR                            { $$ = war_parse_decl_item($1, $2); }

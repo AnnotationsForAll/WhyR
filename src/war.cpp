@@ -1075,10 +1075,18 @@ WarNode war_parse_vector_type(WarNode typeNode, WarNode sizeNode) {
     return ret;
 }
 
-WarNode war_parse_vector_const(WarNode typeNode, WarNode listNode) {
+WarNode war_parse_vector_const(WarNode listNode) {
     using namespace std; using namespace llvm; using namespace whyr;
     
-    // TOOD
+    LogicType* baseTypeRaw = listNode.exprs->front()->returnType();
+    if (!isa<LogicTypeLLVM>(baseTypeRaw)) {
+        throw type_exception("Elements of array constant must be an LLVM type, got type '" + baseTypeRaw->toString() + "'", NULL, warParserSource);
+    }
+    LogicTypeLLVM* baseType = cast<LogicTypeLLVM>(baseTypeRaw);
+    
+    WarNode ret;
+    ret.expr = new LogicExpressionLLVMVectorConstant(baseType->getType(), listNode.exprs, warParserSource);
+    return ret;
 }
 
 // ================================

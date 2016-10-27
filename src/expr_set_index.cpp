@@ -52,7 +52,7 @@ namespace whyr {
         value->checkTypes();
         
         // lhs has to be indexable
-        if (!isa<LogicTypeLLVM>(lhs->returnType()) || !(cast<LogicTypeLLVM>(lhs->returnType())->getType()->isArrayTy() || cast<LogicTypeLLVM>(lhs->returnType())->getType()->isStructTy())) {
+        if (!isa<LogicTypeLLVM>(lhs->returnType()) || !(cast<LogicTypeLLVM>(lhs->returnType())->getType()->isArrayTy() || cast<LogicTypeLLVM>(lhs->returnType())->getType()->isStructTy() || cast<LogicTypeLLVM>(lhs->returnType())->getType()->isVectorTy())) {
             throw type_exception("Operator 'set' expected aggregate type; got type '" + lhs->returnType()->toString() + "'", this);
         }
         

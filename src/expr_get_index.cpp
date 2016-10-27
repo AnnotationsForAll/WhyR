@@ -23,7 +23,7 @@ namespace whyr {
         // we have to type check up here because the retType depends on it
         
         // lhs has to be indexable
-        if (!isa<LogicTypeLLVM>(lhs->returnType()) || !(cast<LogicTypeLLVM>(lhs->returnType())->getType()->isArrayTy() || cast<LogicTypeLLVM>(lhs->returnType())->getType()->isStructTy() || cast<LogicTypeLLVM>(lhs->returnType())->getType()->isPointerTy())) {
+        if (!isa<LogicTypeLLVM>(lhs->returnType()) || !(cast<LogicTypeLLVM>(lhs->returnType())->getType()->isArrayTy() || cast<LogicTypeLLVM>(lhs->returnType())->getType()->isStructTy() || cast<LogicTypeLLVM>(lhs->returnType())->getType()->isPointerTy() || cast<LogicTypeLLVM>(lhs->returnType())->getType()->isVectorTy())) {
             throw type_exception("Operator 'get' expected indexable type; got type '" + lhs->returnType()->toString() + "'", this);
         }
         

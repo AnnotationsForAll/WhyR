@@ -70,6 +70,7 @@ namespace whyr {
         LOGIC_EXPR_SPECIAL_LLVM_CONST,
         LOGIC_EXPR_BADDR,
         LOGIC_EXPR_LLVM_STRUCT_CONST,
+        LOGIC_EXPR_LLVM_VECTOR_CONST,
     };
     
     /**
@@ -1086,6 +1087,28 @@ namespace whyr {
         list<LogicExpression*>* getElems();
         
         virtual ~LogicExpressionLLVMStructConstant();
+        virtual string toString();
+        virtual LogicType* returnType();
+        virtual void checkTypes();
+        virtual void toWhy3(ostream &out, Why3Data &data);
+        
+        static bool classof(const LogicExpression* expr);
+    };
+    
+    /**
+     * This constructs an LLVM vector out of potentially logical intermediate values.
+     */
+    class LogicExpressionLLVMVectorConstant : public LogicExpression {
+    protected:
+        list<LogicExpression*>* elements;
+        Type* type;
+        LogicTypeLLVM* retType;
+    public:
+        LogicExpressionLLVMVectorConstant(Type* type, list<LogicExpression*>* elements, NodeSource* source = NULL);
+        Type* getType();
+        list<LogicExpression*>* getElems();
+        
+        virtual ~LogicExpressionLLVMVectorConstant();
         virtual string toString();
         virtual LogicType* returnType();
         virtual void checkTypes();
