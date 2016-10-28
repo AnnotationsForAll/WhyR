@@ -11,7 +11,7 @@ WhyR is a tool to convert programs written in [LLVM IR](http://llvm.org/) into a
 
 ## Current Features
 
-* Takes input as files in LLVM's bitcode (`.bc`) format
+* Takes input as files in LLVM's bitcode (`.bc`) or IR (`.ll`) format
 * Why3 model generation for the following LLVM constructs:
  * Most common LLVM instructions: Arithmetic, bitwise operations, casts, branches, calls, memory operations...
  * LLVM data types:
@@ -93,14 +93,13 @@ This states that "n cannot be equal to the minimum possible integer (of n's type
 And there you go! To run this program through WhyR, just run the following:
 
 ```
-llvm-as abs.ll -o abs.bc
-whyr abs.bc
+whyr abs.ll
 ```
 
 And it will print out the Why3 theory it created. To prove this file, run something like the following:
 
 ```
-whyr abs.bc | why3 prove -F why -P alt-ergo -
+whyr abs.ll | why3 prove -F why -P alt-ergo -
 ```
 
 ## Documentation
@@ -109,7 +108,6 @@ There are more features to WhyR then just ensures and requires clauses. Learn mo
 
 ## Planned Features
 
-* Ability to take files directly in LLVM's IR (`.ll`) format
 * The following LLVM features:
  * Exception handling
  * Recursive functions
