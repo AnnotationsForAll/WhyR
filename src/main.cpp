@@ -42,6 +42,7 @@ enum Options {
     ENABLE_RTE,
     DISABLE_GOALS,
     COMBINE_GOALS,
+    INPUT_FORMAT,
 };
 static const option::Descriptor usage[] = {
     { UNKNOWN, 0, "", "", option::Arg::None,                    "USAGE: whyr [<option>...] <file>" },
@@ -60,6 +61,9 @@ static const option::Descriptor usage[] = {
     { ENABLE_RTE, 0, "r", "rte", option::Arg::None,             "    --rte (-r)           - Enables RTE assertion generation." },
     { DISABLE_GOALS, 0, "g", "no-goals", option::Arg::None,     "    --no-goals (-g)      - Disables goal generation. Only generates theories." },
     { COMBINE_GOALS, 0, "G", "combine-goals", option::Arg::None,"    --combine-goals (-G) - For each function, combines all goals into one." },
+    { INPUT_FORMAT, 0, "f", "format", requireArgument,          "    --format (-f)        - Change what input format WhyR reads input files as." },
+    { UNKNOWN, 0, "", "", option::Arg::None,                    "                           Valid values: 'auto', 'bc', 'll'" },
+    
     { 0, 0, 0, 0, 0, 0 }
 };
 
@@ -144,12 +148,27 @@ int main(int argc, char** argv) {
         }
     }
     
+    whyr::AnnotatedModule* (*modFunc)(std::istream&, const char*, whyr::WhyRSettings*) = whyr::AnnotatedModule::moduleFromIR;
+    if (options[INPUT_FORMAT]) {
+        std::string optstr(options[INPUT_FORMAT].arg);
+        if (optstr.compare("auto") == 0) {
+            modFunc = whyr::AnnotatedModule::moduleFromIR;
+        } else if (optstr.compare("bc") == 0) {
+            modFunc = whyr::AnnotatedModule::moduleFromBitcode;
+        } else if (optstr.compare("ll") == 0) {
+            modFunc = whyr::AnnotatedModule::moduleFromIR;
+        } else {
+            std::cerr << "error: invalid option to " << options[INPUT_FORMAT].name << ": Unknown input format '" << optstr << "'" << std::endl;
+            return 1;
+        }
+    }
+    
     whyr::AnnotatedModule* mod;
     if (strncmp(input_file, "-", 2) == 0) {
-        mod = whyr::AnnotatedModule::moduleFromBitcode(std::cin, "<stdin>", &settings);
+        mod = modFunc(std::cin, "<stdin>", &settings);
     } else {
         std::ifstream file(input_file, std::ios::binary);
-        mod = whyr::AnnotatedModule::moduleFromBitcode(file, input_file, &settings);
+        mod = modFunc(file, input_file, &settings);
     }
     
     if (!mod) {

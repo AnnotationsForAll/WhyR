@@ -23,20 +23,20 @@
 /**
  * The test class. Used to specify the format of the parameter.
  */
-class FromBCToWhy3WithErrorsTests : public ::testing::TestWithParam<const char*> {};
+class FromLLToWhy3WithErrorsTests : public ::testing::TestWithParam<const char*> {};
 
 /**
  * The test function. Runs once for every bitcode file.
  */
-TEST_P(FromBCToWhy3WithErrorsTests,) {
+TEST_P(FromLLToWhy3WithErrorsTests,) {
     using namespace std;
     using namespace llvm;
     using namespace whyr;
     
     ASSERT_THROW({
-        string fileLoc = string("test/data/bc_files/") + GetParam();
+        string fileLoc = string(GetParam());
         ifstream file = ifstream(fileLoc);
-        AnnotatedModule* module = AnnotatedModule::moduleFromBitcode(file, fileLoc.c_str(), new WhyRSettings());
+        AnnotatedModule* module = AnnotatedModule::moduleFromIR(file, fileLoc.c_str(), new WhyRSettings());
         if (module) {
             module->annotate();
             ostringstream discarded;
@@ -57,21 +57,36 @@ TEST_P(FromBCToWhy3WithErrorsTests,) {
 static std::list<const char*> getFileNames() {
     std::list<const char*> a;
     
-    DIR* dir = opendir("test/data/bc_files");
-    dirent* d = readdir(dir);
-    while (d) {
-        if (d->d_name[0] != '.' && strncmp(d->d_name, "fail", 4) == 0) { // ignore . and .., hidden files such as .svn, and success tests
-            a.push_back(strdup(d->d_name));
+    {
+        DIR* dir = opendir("test/data/ir_files");
+        dirent* d = readdir(dir);
+        while (d) {
+            if (d->d_name[0] != '.' && strncmp(d->d_name, "fail", 4) == 0) { // ignore . and .., hidden files such as .svn, and success tests
+                a.push_back(strdup((std::string("test/data/ir_files/")+d->d_name).c_str()));
+            }
+            
+            d = readdir(dir);
         }
-        
-        d = readdir(dir);
+        closedir(dir);
     }
     
-    closedir(dir);
+    {
+        DIR* dir = opendir("test/data/ir_files_nocompile");
+        dirent* d = readdir(dir);
+        while (d) {
+            if (d->d_name[0] != '.' && strncmp(d->d_name, "fail", 4) == 0) { // ignore . and .., hidden files such as .svn, and success tests
+                a.push_back(strdup((std::string("test/data/ir_files_nocompile/")+d->d_name).c_str()));
+            }
+            
+            d = readdir(dir);
+        }
+        closedir(dir);
+    }
+    
     return a;
 }
 
 /**
  * Create the new tests.
  */
-INSTANTIATE_TEST_CASE_P(,FromBCToWhy3WithErrorsTests,::testing::ValuesIn(getFileNames()));
+INSTANTIATE_TEST_CASE_P(,FromLLToWhy3WithErrorsTests,::testing::ValuesIn(getFileNames()));

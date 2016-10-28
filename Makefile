@@ -2,7 +2,7 @@
 # COMMON OPTIONS
 ##########################
 INCLUDES = -I. -Iinclude
-LIBS =  -pthread -lLLVMBitWriter -lLLVMBitReader -lLLVMCore -lLLVMSupport
+LIBS =  -pthread -lLLVMBitReader -lLLVMIRReader -lLLVMAsmParser -lLLVMCore -lLLVMSupport
 OPTIONS = -std=c++11 -U__STRICT_ANSI__
 H_FILES = $(wildcard include/whyr/*.hpp)
 EXE_NAME = whyr
