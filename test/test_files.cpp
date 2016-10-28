@@ -51,12 +51,12 @@ static std::unordered_set<std::string> files_to_prove({
 /**
  * The test class. Used to specify the format of the parameter.
  */
-class ToWhy3WithoutErrorsTests : public ::testing::TestWithParam<const char*> {};
+class FromBCToToWhy3WithoutErrorsTests : public ::testing::TestWithParam<const char*> {};
 
 /**
  * The test function. Runs once for every bitcode file.
  */
-TEST_P(ToWhy3WithoutErrorsTests,) {
+TEST_P(FromBCToToWhy3WithoutErrorsTests,) {
     using namespace std;
     using namespace llvm;
     using namespace whyr;
@@ -126,7 +126,7 @@ TEST_P(ToWhy3WithoutErrorsTests,) {
 /**
  * Finds the names of all the files in the directory that stores all the bitcode files we want to test.
  */
-static std::list<const char*> getBitcodeFileNames() {
+static std::list<const char*> getFileNames() {
     std::list<const char*> a;
     
     DIR* dir = opendir("test/data/bc_files");
@@ -146,4 +146,4 @@ static std::list<const char*> getBitcodeFileNames() {
 /**
  * Create the new tests.
  */
-INSTANTIATE_TEST_CASE_P(,ToWhy3WithoutErrorsTests,::testing::ValuesIn(getBitcodeFileNames()));
+INSTANTIATE_TEST_CASE_P(,FromBCToToWhy3WithoutErrorsTests,::testing::ValuesIn(getFileNames()));
