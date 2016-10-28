@@ -37,6 +37,7 @@ namespace whyr {
     
     AnnotatedModule* AnnotatedModule::moduleFromIR(istream& file, const char* file_name, WhyRSettings* settings) {
         vector<char> buffer((istreambuf_iterator<char>(file)), (istreambuf_iterator<char>()));
+        buffer.push_back('\0');
         char a[buffer.size()];
         copy(buffer.begin(), buffer.end(), a);
         
@@ -46,7 +47,7 @@ namespace whyr {
         
         LLVMContext* ctx = new LLVMContext();
         SMDiagnostic info;
-        MemoryBufferRef buf(StringRef(a, buffer.size()), StringRef(string(file_name)));
+        MemoryBufferRef buf(StringRef(a, buffer.size()-1), StringRef(string(file_name)));
         
         unique_ptr<Module> m = parseIR(buf, info, *ctx);
         
