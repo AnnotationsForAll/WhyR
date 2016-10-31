@@ -9,6 +9,7 @@
 #include <whyr/logic.hpp>
 #include <whyr/exception.hpp>
 #include <whyr/types.hpp>
+#include <whyr/expressions.hpp>
 
 namespace whyr {
     using namespace std;
@@ -26,6 +27,51 @@ namespace whyr {
         
         for (list<AnnotatedInstruction*>::iterator ii = annotatedInsts.begin(); ii != annotatedInsts.end(); ii++) {
             delete *ii;
+        }
+    }
+    
+    static void addAssignsAssertions(AnnotatedFunction* func) {
+        for (Function::iterator ii = func->rawIR()->begin(); ii != func->rawIR()->end(); ii++) {
+            for (BasicBlock::iterator jj = ii->begin(); jj != ii->end(); jj++) {
+                // if we are a store instruction, we need to be annotated with our assigns clause,
+                // so we assert that we do not modify any memory not in the set
+                if (isa<StoreInst>(&*jj)) {
+                    NodeSource* src = new NodeSource(func, &*jj);
+                    src->label = "assigns";
+                    
+                    LogicExpression* expr = NULL;
+                    for (list<LogicExpression*>::iterator kk = func->getAssignsLocations()->begin(); kk != func->getAssignsLocations()->end(); kk++) {
+                        LogicExpression* inExpr = new LogicExpressionInSet(
+                                *kk,
+                                new LogicExpressionLLVMOperand(jj->getOperand(1),src)
+                        ,src);
+                        
+                        if (expr) {
+                            inExpr = new LogicExpressionBinaryBoolean(LogicExpressionBinaryBoolean::OP_OR,
+                                    expr,
+                                    inExpr
+                            ,src);
+                        }
+                        expr = inExpr;
+                    }
+                    
+                    AnnotatedInstruction* inst = func->getAnnotatedInstruction(&*jj);
+                    if (inst) {
+                        if (inst->getAssertClause()) {
+                            inst->setAssertClause(new LogicExpressionBinaryBoolean(LogicExpressionBinaryBoolean::OP_AND,
+                                    expr,
+                                    inst->getAssertClause()
+                            ,src));
+                        } else {
+                            inst->setAssertClause(expr);
+                        }
+                    } else {
+                        inst = new AnnotatedInstruction(func, &*jj);
+                        func->getAnnotatedInstructions()->push_back(inst);
+                        inst->setAssertClause(expr);
+                    }
+                }
+            }
         }
     }
     
@@ -100,6 +146,11 @@ namespace whyr {
                     annotatedInsts.push_back(annInst);
                 }
             }
+        }
+        
+        // add assigns assertions if we need to
+        if (!assigns.empty()) {
+            addAssignsAssertions(this);
         }
     }
     

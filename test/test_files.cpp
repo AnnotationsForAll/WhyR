@@ -46,6 +46,7 @@ static std::unordered_set<std::string> files_to_prove({
     "vector_elem_ops.bc",
     "vector_cmp.bc",
     "vector_math.bc",
+    "assigns.bc",
 });
 
 /**

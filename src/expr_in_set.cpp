@@ -20,10 +20,7 @@ namespace whyr {
     LogicExpressionInSet::LogicExpressionInSet(LogicExpression* setExpr, LogicExpression* itemExpr, NodeSource* source) : LogicExpression(source), setExpr{setExpr}, itemExpr{itemExpr} {
         id = classID;
     }
-    LogicExpressionInSet::~LogicExpressionInSet() {
-        delete setExpr;
-        delete itemExpr;
-    }
+    LogicExpressionInSet::~LogicExpressionInSet() {}
     
     LogicExpression* LogicExpressionInSet::getSetExpr() {
         return setExpr;

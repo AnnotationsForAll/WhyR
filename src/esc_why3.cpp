@@ -2548,11 +2548,12 @@ theory MemorySet
     
     constant empty : mem_set = SET.Set.empty
     
-    function add (p:pointer t) (s:mem_set) :mem_set = SET.Set.add p s
+    function add (p:pointer 'a) (s:mem_set) :mem_set = SET.Set.add (cast p) s
     
-    predicate mem (pointer t) mem_set
+    predicate mem (pointer 'a) mem_set
     
-    axiom member_exact: forall p s. (SET.Set.mem p s) -> (mem p s)
+    axiom member_exact: forall p : (pointer 'a). forall s : mem_set.
+    (SET.Set.mem (cast p) s) -> (mem p s)
     (* TODO: p is in the set if it fully overlaps with another pointer in the set. *)
 end
 )";
