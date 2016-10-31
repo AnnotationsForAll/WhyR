@@ -81,9 +81,11 @@ namespace whyr {
         }
         
         for (list<LogicExpression*>::iterator ii = elems.begin(); ii != elems.end(); ii++) {
-            out << "(" << theory << ".add ";
+            out << "(" << theory << ".add (";
             (*ii)->toWhy3(out, data);
-            out << " ";
+            out << ":";
+            (*ii)->returnType()->toWhy3(out, data);
+            out << ") ";
         }
         
         out << "(" << theory << ".empty:";

@@ -64,9 +64,11 @@ namespace whyr {
             theory = "Set";
         }
         
-        out << "(" << theory << ".mem ";
+        out << "(" << theory << ".mem (";
         itemExpr->toWhy3(out, data);
-        out << " ";
+        out << ":";
+        itemExpr->returnType()->toWhy3(out, data);
+        out << ") ";
         setExpr->toWhy3(out, data);
         out << ")";
     }
