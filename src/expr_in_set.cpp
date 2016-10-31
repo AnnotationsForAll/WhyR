@@ -47,11 +47,31 @@ namespace whyr {
         itemExpr->checkTypes();
         
         // setExpr must be a set
+        if (!isa<LogicTypeSet>(setExpr->returnType())) {
+            throw type_exception("Set argument of 'in' expected to be of type 'set<" + itemExpr->returnType()->toString() + ">'; got type '" + setExpr->returnType()->toString() + "'", this);
+        }
+        
         // itemExpr must be the element type of the set
+        if (!itemExpr->returnType()->equals(cast<LogicTypeSet>(setExpr->returnType())->getType())) {
+            throw type_exception("Element argument of 'in' expected to be of type '" + cast<LogicTypeSet>(setExpr->returnType())->getType()->toString() + "'; got type '" + itemExpr->returnType()->toString() + "'", this);
+        }
     }
     
     void LogicExpressionInSet::toWhy3(ostream &out, Why3Data &data) {
+        string theory;
+        if (isa<LogicTypeLLVM>(itemExpr->returnType()) && cast<LogicTypeLLVM>(itemExpr->returnType())->getType()->isPointerTy()) {
+            data.importsNeeded.insert("MemorySet");
+            theory = "MemorySet";
+        } else {
+            data.importsNeeded.insert("set.Set");
+            theory = "Set";
+        }
         
+        out << "(" << theory << ".mem ";
+        itemExpr->toWhy3(out, data);
+        out << " ";
+        setExpr->toWhy3(out, data);
+        out << ")";
     }
     
     bool LogicExpressionInSet::classof(const LogicExpression* expr) {

@@ -824,6 +824,15 @@ namespace whyr {
         }
     };
     
+    class ParserInSet : public ExpressionParser {
+    public:
+        LogicExpression* parse(const char* exprName, MDNode* node, NodeSource* source) {
+            requireMinArgs(node, exprName, source, 2);
+            requireMaxArgs(node, exprName, source, 2);
+            return new LogicExpressionInSet(parseMetadata(node->getOperand(1).get(), source), parseMetadata(node->getOperand(2).get(), source), source);
+        }
+    };
+    
     /* ==========================
      * PARSER REGISTRY DATA TABLE
      * ==========================
@@ -925,6 +934,7 @@ namespace whyr {
         {"blockaddress",new ParserBaddr()},
         {"struct",new ParserStructConst()},
         {"vector",new ParserVectorConst()},
+        {"in",new ParserInSet()},
     });
     map<string,ExpressionParser*>* ExpressionParser::getExpressionParsers() {
         return &parsers;
