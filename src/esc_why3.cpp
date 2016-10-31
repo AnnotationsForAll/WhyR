@@ -2503,6 +2503,14 @@ theory Pointer
 
     function offset_pointer (p:(pointer 'a)) (n:int) :(pointer 'a) =
     { base = p.base; offset = p.offset + n; }
+
+    function havoc_mem State.mem_data (pointer 'a) int :State.mem_data
+    axiom separation_havoc: forall a : (pointer 'a). forall b : (pointer 'b). forall m i.
+        (separated a i b i) -> (load_mem (havoc_mem m a i) b) = (load_mem m b)
+    function havoc (s:State.state) (p:(pointer 'a)) (i:int) :State.state =
+        let old_mem = (Map.get s.memory p.base) in
+        let new_mem = {old_mem with data = (havoc_mem old_mem.data p i);} in
+    {s with memory = (Map.set s.memory p.base new_mem);}
 end
 
 theory Alloc
