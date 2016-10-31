@@ -2538,6 +2538,23 @@ theory Alloc
         } in
     (new_s,new_p)
 end
+
+theory MemorySet
+    use import Pointer
+    namespace import SET use import set.Set end
+    
+    type t
+    type mem_set = SET.Set.set (pointer t)
+    
+    constant empty : mem_set = SET.Set.empty
+    
+    function add (p:pointer t) (s:mem_set) :mem_set = SET.Set.add p s
+    
+    predicate mem (pointer t) mem_set
+    
+    axiom member_exact: forall p s. (SET.Set.mem p s) -> (mem p s)
+    (* TODO: p is in the set if it fully overlaps with another pointer in the set. *)
+end
 )";
 
     static const string mem_model_dummy = R"(theory State
@@ -2562,6 +2579,13 @@ theory Alloc
     use import int.Int
     
     function alloc state int :(state,pointer)
+end
+
+theory MemorySet
+    type mem_set
+    constant empty : mem_set
+    function add pointer mem_set :mem_set
+    predicate mem pointer mem_set
 end
 )";
     
