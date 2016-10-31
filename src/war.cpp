@@ -1089,6 +1089,35 @@ WarNode war_parse_vector_const(WarNode listNode) {
     return ret;
 }
 
+WarNode war_parse_set_type(WarNode typeNode) {
+    using namespace std; using namespace llvm; using namespace whyr;
+    
+    LogicType* baseType = cast<LogicTypeType>(typeNode.expr->returnType())->getType();
+    
+    WarNode ret;
+    ret.expr = new LogicExpressionConstantType(new LogicTypeType(new LogicTypeSet(baseType, warParserSource), warParserSource), warParserSource);
+    return ret;
+}
+
+WarNode war_parse_set_const(WarNode listNode) {
+    using namespace std; using namespace llvm; using namespace whyr;
+    
+    LogicType* baseType = listNode.exprs->front()->returnType();
+    
+    WarNode ret;
+    ret.expr = new LogicExpressionCreateSet(baseType, *listNode.exprs, warParserSource);
+    delete listNode.exprs;
+    return ret;
+}
+
+WarNode war_parse_in_op(WarNode lhs, WarNode rhs) {
+    using namespace std; using namespace llvm; using namespace whyr;
+    
+    WarNode ret;
+    ret.expr = new LogicExpressionInSet(rhs.expr, lhs.expr, warParserSource);
+    return ret;
+}
+
 // ================================
 // End of parser functions.
 // ================================

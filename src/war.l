@@ -11,6 +11,7 @@ null                                { return TOKEN_NULL; }
 min                                 { return TOKEN_MIN; }
 max                                 { return TOKEN_MAX; }
 blockaddress                        { return TOKEN_BADDR; }
+in                                  { return TOKEN_OP_IN; }
 sdiv                                { return TOKEN_OP_SDIV; }
 udiv                                { return TOKEN_OP_UDIV; }
 rem                                 { return TOKEN_OP_REM; }
@@ -51,6 +52,7 @@ float                               { return TOKEN_TYPE_LLVM_FLOAT; }
 double                              { return TOKEN_TYPE_LLVM_DOUBLE; }
 struct                              { return TOKEN_TYPE_STRUCT; }
 vector                              { return TOKEN_TYPE_VECTOR; }
+set                                 { return TOKEN_TYPE_SET; }
 i[0-9]+                             {
                                         yylval.token = yytext+1;
                                         return TOKEN_TYPE_LLVM_INT;
