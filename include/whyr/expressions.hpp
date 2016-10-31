@@ -71,6 +71,7 @@ namespace whyr {
         LOGIC_EXPR_BADDR,
         LOGIC_EXPR_LLVM_STRUCT_CONST,
         LOGIC_EXPR_LLVM_VECTOR_CONST,
+        LOGIC_EXPR_IN_SET,
     };
     
     /**
@@ -136,6 +137,7 @@ namespace whyr {
         virtual string toString();
         virtual LogicType* returnType();
         virtual void checkTypes();
+        virtual void toWhy3(ostream &out, Why3Data &data);
         
         static bool classof(const LogicExpression* expr);
     };
@@ -1109,6 +1111,27 @@ namespace whyr {
         list<LogicExpression*>* getElems();
         
         virtual ~LogicExpressionLLVMVectorConstant();
+        virtual string toString();
+        virtual LogicType* returnType();
+        virtual void checkTypes();
+        virtual void toWhy3(ostream &out, Why3Data &data);
+        
+        static bool classof(const LogicExpression* expr);
+    };
+    
+    /**
+     * This is a boolean operator that takes a set and an element, and checks if that element is in the set.
+     */
+    class LogicExpressionInSet : public LogicExpression {
+    protected:
+        LogicExpression* setExpr;
+        LogicExpression* itemExpr;
+    public:
+        LogicExpressionInSet(LogicExpression* setExpr, LogicExpression* itemExpr, NodeSource* source = NULL);
+        LogicExpression* getSetExpr();
+        LogicExpression* getItemExpr();
+        
+        virtual ~LogicExpressionInSet();
         virtual string toString();
         virtual LogicType* returnType();
         virtual void checkTypes();

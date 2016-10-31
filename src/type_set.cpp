@@ -43,6 +43,16 @@ namespace whyr {
         return isa<LogicTypeSet>(other) && this->type->equals(cast<LogicTypeSet>(other)->type);
     }
     
+    void LogicTypeSet::toWhy3(ostream &out, Why3Data &data) {
+        if (isa<LogicTypeLLVM>(type) && cast<LogicTypeLLVM>(type)->getType()->isPointerTy()) {
+            out << "mem_set";
+        } else {
+            out << "(set ";
+            type->toWhy3(out, data);
+            out << ")";
+        }
+    }
+    
     bool LogicTypeSet::classof(const LogicType* type) {
         return type->id == classID;
     }
