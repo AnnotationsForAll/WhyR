@@ -529,8 +529,12 @@ namespace whyr {
         }
         
         if (expr) {
+            // add the RTE label to asserts made by RTE
+            expr->setSource(new NodeSource(func, inst));
+            expr->getSource()->label = "rte";
+            
             expr->checkTypes();
-        
+            
             AnnotatedInstruction* annInst = func->getAnnotatedInstruction(inst);
             if (annInst) {
                 if (annInst->getAssertClause()) {

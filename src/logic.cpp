@@ -20,6 +20,10 @@ namespace whyr {
         return source;
     }
     
+    void LogicType::setSource(NodeSource* source) {
+        this->source = source;
+    }
+    
     string LogicType::toString() {
         return "(unknown type)";
     }
@@ -73,6 +77,10 @@ namespace whyr {
     
     NodeSource* LogicExpression::getSource() {
         return source;
+    }
+    
+    void LogicExpression::setSource(NodeSource* source) {
+        this->source = source;
     }
     
     string LogicExpression::toString() {
