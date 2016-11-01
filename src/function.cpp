@@ -89,6 +89,7 @@ namespace whyr {
                                 func->getAssignsLocations()
                         ,src);
                         */
+                        expr = new LogicExpressionBooleanConstant(false, src);
                     } else {
                         // if the called function assigns everything, it can always assign something we can't.
                         // this equates to being unprovable- that is, false.
