@@ -83,20 +83,56 @@ namespace whyr {
                     if (calledFunc->getAssignsLocations()) {
                         // add the assertion that the called function doesn't assign to anything we can't.
                         
-                        /* // FIXME!
-                        expr = new LogicExpressionSubset(
-                                calledFunc->getAssignsLocations(),
-                                func->getAssignsLocations()
-                        ,src);
-                        */
-                        expr = new LogicExpressionBooleanConstant(false, src);
+                        // forall x : a_memb. (mem x a) -> (mem x b || mem x c || ...)
+                        for (list<LogicExpression*>::iterator kk = func->getAssignsLocations()->begin(); kk != func->getAssignsLocations()->end(); kk++) {
+                            NodeSource* newSource = new NodeSource(src);
+                            LogicLocal* local = new LogicLocal(); local->name = "elem"; local->type = cast<LogicTypeSet>((*kk)->returnType())->getType();
+                            newSource->logicLocals[local->name].push_front(local);
+                            
+                            LogicExpression* orExpr = NULL;
+                            for (list<LogicExpression*>::iterator ll = calledFunc->getAssignsLocations()->begin(); ll != calledFunc->getAssignsLocations()->end(); ll++) {
+                                LogicExpression* inExpr = new LogicExpressionInSet(
+                                        *ll,
+                                        new LogicExpressionLocal("elem", newSource)
+                                ,newSource);
+                                
+                                if (orExpr) {
+                                    orExpr = new LogicExpressionBinaryBoolean(LogicExpressionBinaryBoolean::OP_OR,
+                                            orExpr,
+                                            inExpr
+                                    ,newSource);
+                                } else {
+                                    orExpr = inExpr;
+                                }
+                            }
+                            
+                            LogicExpression* forallExpr = new LogicExpressionQuantifier(true,
+                                    new list<LogicLocal*>({local}),
+                                    new LogicExpressionBinaryBoolean(LogicExpressionBinaryBoolean::OP_IMPLIES,
+                                            new LogicExpressionInSet(
+                                                    *kk,
+                                                    new LogicExpressionLocal("elem", newSource)
+                                            ,newSource),
+                                            orExpr
+                                    ,newSource)
+                            ,newSource);
+                            
+                            if (expr) {
+                                expr = new LogicExpressionBinaryBoolean(LogicExpressionBinaryBoolean::OP_AND,
+                                        expr,
+                                        forallExpr
+                                ,newSource);
+                            } else {
+                                expr = forallExpr;
+                            }
+                        }
                     } else {
                         // if the called function assigns everything, it can always assign something we can't.
                         // this equates to being unprovable- that is, false.
                         expr = new LogicExpressionBooleanConstant(false, src);
                     }
                     
-                    AnnotatedInstruction* inst = func->getAnnotatedInstruction(jj->getNextNode());
+                    AnnotatedInstruction* inst = func->getAnnotatedInstruction(&*jj);
                     if (inst) {
                         if (inst->getAssertClause()) {
                             inst->setAssertClause(new LogicExpressionBinaryBoolean(LogicExpressionBinaryBoolean::OP_AND,
