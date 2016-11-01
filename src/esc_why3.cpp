@@ -736,6 +736,23 @@ end
                 }
                 out << "    end" << endl;
                 
+                // if we have an assigns clause, we need to import what it needs
+                if (calledFunc->getAssignsLocations()) {
+                    TypeInfo info;
+                    Why3Data data;
+                    data.module = func->getModule();
+                    data.source = new NodeSource(func, inst);
+                    data.info = &info;
+                    data.statepoint = getWhy3StatepointBefore(func, inst);
+                    
+                    ostringstream discarded;
+                    for (list<LogicExpression*>::iterator ii = calledFunc->getAssignsLocations()->begin(); ii != calledFunc->getAssignsLocations()->end(); ii++) {
+                        (*ii)->toWhy3(discarded, data);
+                    }
+                    
+                    addImports(out, data);
+                }
+                
                 break;
             }
             case Instruction::CastOps::Trunc: {
@@ -1660,9 +1677,6 @@ end
                     for (list<LogicExpression*>::iterator ii = calledFunc->getAssignsLocations()->begin(); ii != calledFunc->getAssignsLocations()->end(); ii++) {
                         out << " ";
                         (*ii)->toWhy3(out, data);
-                        out << " ";
-                        (*ii)->returnType()->toWhy3(out, data);
-                        out << ".elem_size";
                         out << ")";
                     }
                     
@@ -2530,14 +2544,6 @@ theory Pointer
 
     function offset_pointer (p:(pointer 'a)) (n:int) :(pointer 'a) =
     { base = p.base; offset = p.offset + n; }
-
-    function havoc_mem State.mem_data (pointer 'a) int :State.mem_data
-    axiom separation_havoc: forall a : (pointer 'a). forall b : (pointer 'b). forall m i.
-        (separated a i b i) -> (load_mem (havoc_mem m a i) b) = (load_mem m b)
-    function havoc (s:State.state) (p:(pointer 'a)) (i:int) :State.state =
-        let old_mem = (Map.get s.memory p.base) in
-        let new_mem = {old_mem with data = (havoc_mem old_mem.data p i);} in
-    {s with memory = (Map.set s.memory p.base new_mem);}
 end
 
 theory Alloc
@@ -2567,6 +2573,7 @@ theory Alloc
 end
 
 theory MemorySet
+    use import State
     use import Pointer
     namespace import SET use import set.Set end
     
@@ -2578,10 +2585,13 @@ theory MemorySet
     function add (p:pointer 'a) (s:mem_set) :mem_set = SET.Set.add (cast p) s
     
     predicate mem (pointer 'a) mem_set
-    
     axiom member_exact: forall p : (pointer 'a). forall s : mem_set.
     (SET.Set.mem (cast p) s) -> (mem p s)
     (* TODO: p is in the set if it fully overlaps with another pointer in the set. *)
+    
+    function havoc state mem_set :state
+    axiom havoc: forall s ms. forall e : pointer 'a.
+    not (mem e ms) -> (load (havoc s ms) e) = (load s e)
 end
 )";
 
@@ -2610,10 +2620,14 @@ theory Alloc
 end
 
 theory MemorySet
+    use import State
+    use import Pointer
+    
     type mem_set
     constant empty : mem_set
     function add pointer mem_set :mem_set
     predicate mem pointer mem_set
+    function havoc state mem_set :state
 end
 )";
     
