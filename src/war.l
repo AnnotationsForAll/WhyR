@@ -13,6 +13,9 @@ max                                 { return TOKEN_MAX; }
 blockaddress                        { return TOKEN_BADDR; }
 in                                  { return TOKEN_OP_IN; }
 old                                 { return TOKEN_OLD; }
+fresh                               { return TOKEN_FRESH; }
+before                              { return TOKEN_BEFORE; }
+after                               { return TOKEN_AFTER; }
 sdiv                                { return TOKEN_OP_SDIV; }
 udiv                                { return TOKEN_OP_UDIV; }
 rem                                 { return TOKEN_OP_REM; }

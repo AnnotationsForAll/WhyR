@@ -182,4 +182,6 @@ INSTANTIATE_TEST_CASE_P(,WarTests,(setup(), ::testing::ValuesIn((WarTestData[]){
     {"old 1", new whyr::LogicTypeInt()},
     {"old old old old 1", new whyr::LogicTypeInt()},
     {"old (struct {i32,i16,float}) struct {(i32)old old 1,(i16)2,(float)old 1.0}", new whyr::LogicTypeLLVM(llvm::StructType::get(llvm::Type::getIntNTy(*ctx,32), llvm::Type::getIntNTy(*ctx,16), llvm::Type::getFloatTy(*ctx), NULL))},
+    {"fresh before (i32*)null", new whyr::LogicTypeBool()},
+    {"fresh after (i32*) null", new whyr::LogicTypeBool()},
 })));

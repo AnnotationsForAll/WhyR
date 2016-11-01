@@ -74,6 +74,7 @@ namespace whyr {
         LOGIC_EXPR_IN_SET,
         LOGIC_EXPR_SUBSET,
         LOGIC_EXPR_OLD,
+        LOGIC_EXPR_FRESH,
     };
     
     /**
@@ -1174,6 +1175,26 @@ namespace whyr {
         LogicExpression* getExpr();
         
         virtual ~LogicExpressionOld();
+        virtual string toString();
+        virtual LogicType* returnType();
+        virtual void checkTypes();
+        virtual void toWhy3(ostream &out, Why3Data &data);
+        
+        static bool classof(const LogicExpression* expr);
+    };
+    
+    /**
+     * This finds if a certain pointer points to a block that was allocated before or after the current state.
+     */
+    class LogicExpressionFresh : public LogicExpression {
+    protected:
+        bool before;
+        LogicExpression* expr;
+    public:
+        LogicExpressionFresh(bool before, LogicExpression* expr, NodeSource* source = NULL);
+        LogicExpression* getExpr();
+        
+        virtual ~LogicExpressionFresh();
         virtual string toString();
         virtual LogicType* returnType();
         virtual void checkTypes();

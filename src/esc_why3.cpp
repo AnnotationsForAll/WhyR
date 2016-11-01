@@ -2570,6 +2570,9 @@ theory Alloc
             offset = 0;
         } in
     (new_s,new_p)
+    
+    predicate allocated_before (s:state) (p:pointer 'a) = s.n_allocs < p.base
+    predicate allocated_after (s:state) (p:pointer 'a) = s.n_allocs >= p.base
 end
 
 theory MemorySet
@@ -2619,6 +2622,8 @@ theory Alloc
     use import int.Int
     
     function alloc state int :(state,pointer)
+    predicate allocated_before state pointer
+    predicate allocated_after state pointer
 end
 
 theory MemorySet

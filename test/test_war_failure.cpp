@@ -106,4 +106,6 @@ INSTANTIATE_TEST_CASE_P(,WarFailureTests,(setup(), ::testing::ValuesIn((std::str
     "1.0 in (set) {1,2,3}",
     "(set) {1,2,3} in (set) {1.0,2.0,3.0}",
     "old old",
+    "fresh (i32*)null",
+    "fresh before 0",
 })));

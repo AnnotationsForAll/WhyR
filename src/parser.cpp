@@ -851,6 +851,16 @@ namespace whyr {
         }
     };
     
+    class ParserFresh : public ExpressionParser {
+    public:
+        bool value; ParserFresh(bool value) : value{value} {}
+        LogicExpression* parse(const char* exprName, MDNode* node, NodeSource* source) {
+            requireMinArgs(node, exprName, source, 1);
+            requireMaxArgs(node, exprName, source, 1);
+            return new LogicExpressionFresh(value, parseMetadata(node->getOperand(1).get(), source), source);
+        }
+    };
+    
     /* ==========================
      * PARSER REGISTRY DATA TABLE
      * ==========================
@@ -955,6 +965,8 @@ namespace whyr {
         {"in",new ParserInSet()},
         {"subset",new ParserSubset()},
         {"old",new ParserOld()},
+        {"fresh.before",new ParserFresh(true)},
+        {"fresh.after",new ParserFresh(false)},
     });
     map<string,ExpressionParser*>* ExpressionParser::getExpressionParsers() {
         return &parsers;
