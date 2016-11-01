@@ -1642,6 +1642,33 @@ end
                     addOperand(out, func->getModule(), inst, func);
                     out << " = " << calleeTheoryName << ".F.ret_val -> ";
                 }
+                
+                // if there's an assigns clause, we can specify how the state changed when the function was called
+                if (calledFunc->getAssignsLocations()) {
+                    TypeInfo info;
+                    Why3Data data;
+                    data.module = func->getModule();
+                    data.source = new NodeSource(func, inst);
+                    data.info = &info;
+                    data.statepoint = getWhy3StatepointBefore(func, inst);
+                    
+                    out << calleeTheoryName << ".F.exit_state = ";
+                    for (list<LogicExpression*>::iterator ii = calledFunc->getAssignsLocations()->begin(); ii != calledFunc->getAssignsLocations()->end(); ii++) {
+                        out << "(havoc ";
+                    }
+                    out << data.statepoint;
+                    for (list<LogicExpression*>::iterator ii = calledFunc->getAssignsLocations()->begin(); ii != calledFunc->getAssignsLocations()->end(); ii++) {
+                        out << " ";
+                        (*ii)->toWhy3(out, data);
+                        out << " ";
+                        (*ii)->returnType()->toWhy3(out, data);
+                        out << ".elem_size";
+                        out << ")";
+                    }
+                    
+                    out << " -> ";
+                }
+                
                 out << calleeTheoryName << ".F.function_ensures";
                 out << " -> " << getWhy3StatepointBefore(func, inst->getNextNode()) << " = " << calleeTheoryName << ".F.exit_state";
                 break;

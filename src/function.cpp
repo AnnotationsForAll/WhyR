@@ -112,6 +112,8 @@ namespace whyr {
                     
                     // An assigns node is a list of sets to any pointer type.
                     if (kind == assignsKind) {
+                        hasAssgins = true;
+                        
                         for (unsigned i = 0; i < node->getNumOperands(); i++) {
                             Metadata* subnode = node->getOperand(i).get();
                             LogicExpression* expr = ExpressionParser::parseMetadata(subnode, new NodeSource(this, NULL, node->getOperand(0).get()));
@@ -149,7 +151,7 @@ namespace whyr {
         }
         
         // add assigns assertions if we need to
-        if (!assigns.empty()) {
+        if (hasAssgins) {
             addAssignsAssertions(this);
         }
     }
@@ -167,6 +169,9 @@ namespace whyr {
     }
     
     list<LogicExpression*>* AnnotatedFunction::getAssignsLocations() {
+        if (!hasAssgins) {
+            return NULL;
+        }
         return &assigns;
     }
     
