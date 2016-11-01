@@ -70,6 +70,46 @@ namespace whyr {
                         func->getAnnotatedInstructions()->push_back(inst);
                         inst->setAssertClause(expr);
                     }
+                } if (isa<CallInst>(&*jj)) {
+                    Function* calledFuncRaw = cast<CallInst>(&*jj)->getCalledFunction();
+                    if (!calledFuncRaw) continue;
+                    AnnotatedFunction* calledFunc = func->getModule()->getFunction(calledFuncRaw);
+                    if (!calledFunc) continue;
+                    
+                    NodeSource* src = new NodeSource(func, &*jj);
+                    src->label = "assigns";
+                    LogicExpression* expr = NULL;
+                    
+                    if (calledFunc->getAssignsLocations()) {
+                        // add the assertion that the called function doesn't assign to anything we can't.
+                        
+                        /* // FIXME!
+                        expr = new LogicExpressionSubset(
+                                calledFunc->getAssignsLocations(),
+                                func->getAssignsLocations()
+                        ,src);
+                        */
+                    } else {
+                        // if the called function assigns everything, it can always assign something we can't.
+                        // this equates to being unprovable- that is, false.
+                        expr = new LogicExpressionBooleanConstant(false, src);
+                    }
+                    
+                    AnnotatedInstruction* inst = func->getAnnotatedInstruction(jj->getNextNode());
+                    if (inst) {
+                        if (inst->getAssertClause()) {
+                            inst->setAssertClause(new LogicExpressionBinaryBoolean(LogicExpressionBinaryBoolean::OP_AND,
+                                    expr,
+                                    inst->getAssertClause()
+                            ,src));
+                        } else {
+                            inst->setAssertClause(expr);
+                        }
+                    } else {
+                        inst = new AnnotatedInstruction(func, &*jj);
+                        func->getAnnotatedInstructions()->push_back(inst);
+                        inst->setAssertClause(expr);
+                    }
                 }
             }
         }
