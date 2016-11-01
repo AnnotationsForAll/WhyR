@@ -833,6 +833,15 @@ namespace whyr {
         }
     };
     
+    class ParserSubset : public ExpressionParser {
+    public:
+        LogicExpression* parse(const char* exprName, MDNode* node, NodeSource* source) {
+            requireMinArgs(node, exprName, source, 2);
+            requireMaxArgs(node, exprName, source, 2);
+            return new LogicExpressionSubset(parseMetadata(node->getOperand(1).get(), source), parseMetadata(node->getOperand(2).get(), source), source);
+        }
+    };
+    
     /* ==========================
      * PARSER REGISTRY DATA TABLE
      * ==========================
@@ -935,6 +944,7 @@ namespace whyr {
         {"struct",new ParserStructConst()},
         {"vector",new ParserVectorConst()},
         {"in",new ParserInSet()},
+        {"subset",new ParserSubset()},
     });
     map<string,ExpressionParser*>* ExpressionParser::getExpressionParsers() {
         return &parsers;

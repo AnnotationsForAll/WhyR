@@ -178,4 +178,5 @@ INSTANTIATE_TEST_CASE_P(,WarTests,(setup(), ::testing::ValuesIn((WarTestData[]){
     {"((vector) {(i32)1,(i32)2})[0 = (i32)42]", new whyr::LogicTypeLLVM(llvm::VectorType::get(llvm::Type::getIntNTy(*ctx,32), 2))},
     {"(set) {1,2,3,4}", new whyr::LogicTypeSet(new whyr::LogicTypeInt())},
     {"3 in (set) {1,2,3,4}", new whyr::LogicTypeBool()},
+    {"(set) {1,2} in (set) {1,2,3,4}", new whyr::LogicTypeBool()},
 })));

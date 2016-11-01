@@ -104,4 +104,5 @@ INSTANTIATE_TEST_CASE_P(,WarFailureTests,(setup(), ::testing::ValuesIn((std::str
     "(set) 3",
     "(set) {1.0, 2}",
     "1.0 in (set) {1,2,3}",
+    "(set) {1,2,3} in (set) {1.0,2.0,3.0}",
 })));

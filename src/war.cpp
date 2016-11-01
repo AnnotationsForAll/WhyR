@@ -1114,7 +1114,11 @@ WarNode war_parse_in_op(WarNode lhs, WarNode rhs) {
     using namespace std; using namespace llvm; using namespace whyr;
     
     WarNode ret;
-    ret.expr = new LogicExpressionInSet(rhs.expr, lhs.expr, warParserSource);
+    if (lhs.expr->returnType()->equals(rhs.expr->returnType())) {
+        ret.expr = new LogicExpressionSubset(rhs.expr, lhs.expr, warParserSource);
+    } else {
+        ret.expr = new LogicExpressionInSet(rhs.expr, lhs.expr, warParserSource);
+    }
     return ret;
 }
 

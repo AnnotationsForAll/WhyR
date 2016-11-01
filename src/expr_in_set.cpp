@@ -34,7 +34,7 @@ namespace whyr {
         return itemExpr->toString() + " in " + setExpr->toString();
     }
     
-    LogicTypeBool retType;
+    static LogicTypeBool retType;
     LogicType* LogicExpressionInSet::returnType() {
         return &retType;
     }

@@ -2582,12 +2582,14 @@ theory MemorySet
     
     constant empty : mem_set = SET.Set.empty
     
-    function add (p:pointer 'a) (s:mem_set) :mem_set = SET.Set.add (cast p) s
+    function add (p:pointer 'a) (s:mem_set) :mem_set = (SET.Set.add (cast p) s)
     
     predicate mem (pointer 'a) mem_set
     axiom member_exact: forall p : (pointer 'a). forall s : mem_set.
     (SET.Set.mem (cast p) s) -> (mem p s)
     (* TODO: p is in the set if it fully overlaps with another pointer in the set. *)
+
+    predicate subset (sub:mem_set) (super:mem_set) = forall x : (pointer t). mem x sub -> mem x super
     
     function havoc state mem_set :state
     axiom havoc: forall s ms. forall e : pointer 'a.
