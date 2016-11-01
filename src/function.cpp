@@ -55,6 +55,16 @@ namespace whyr {
                         expr = inExpr;
                     }
                     
+                    // it is also acceptable to assign a location if it is allocated after the function's entry point.
+                    expr = new LogicExpressionBinaryBoolean(LogicExpressionBinaryBoolean::OP_OR,
+                            new LogicExpressionOld(
+                                    new LogicExpressionFresh(false,
+                                            new LogicExpressionLLVMOperand(jj->getOperand(1),src)
+                                    ,src)
+                            ,src),
+                            expr
+                    ,src);
+                    
                     AnnotatedInstruction* inst = func->getAnnotatedInstruction(&*jj);
                     if (inst) {
                         if (inst->getAssertClause()) {
