@@ -73,6 +73,7 @@ namespace whyr {
         LOGIC_EXPR_LLVM_VECTOR_CONST,
         LOGIC_EXPR_IN_SET,
         LOGIC_EXPR_SUBSET,
+        LOGIC_EXPR_OLD,
     };
     
     /**
@@ -1154,6 +1155,25 @@ namespace whyr {
         LogicExpression* getSuperExpr();
         
         virtual ~LogicExpressionSubset();
+        virtual string toString();
+        virtual LogicType* returnType();
+        virtual void checkTypes();
+        virtual void toWhy3(ostream &out, Why3Data &data);
+        
+        static bool classof(const LogicExpression* expr);
+    };
+    
+    /**
+     * This evaluates an expression at an earlier statepoint, which is the beginning of the function.
+     */
+    class LogicExpressionOld : public LogicExpression {
+    protected:
+        LogicExpression* expr;
+    public:
+        LogicExpressionOld(LogicExpression* expr, NodeSource* source = NULL);
+        LogicExpression* getExpr();
+        
+        virtual ~LogicExpressionOld();
         virtual string toString();
         virtual LogicType* returnType();
         virtual void checkTypes();

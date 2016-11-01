@@ -842,6 +842,15 @@ namespace whyr {
         }
     };
     
+    class ParserOld : public ExpressionParser {
+    public:
+        LogicExpression* parse(const char* exprName, MDNode* node, NodeSource* source) {
+            requireMinArgs(node, exprName, source, 1);
+            requireMaxArgs(node, exprName, source, 1);
+            return new LogicExpressionOld(parseMetadata(node->getOperand(1).get(), source), source);
+        }
+    };
+    
     /* ==========================
      * PARSER REGISTRY DATA TABLE
      * ==========================
@@ -945,6 +954,7 @@ namespace whyr {
         {"vector",new ParserVectorConst()},
         {"in",new ParserInSet()},
         {"subset",new ParserSubset()},
+        {"old",new ParserOld()},
     });
     map<string,ExpressionParser*>* ExpressionParser::getExpressionParsers() {
         return &parsers;

@@ -1122,6 +1122,14 @@ WarNode war_parse_in_op(WarNode lhs, WarNode rhs) {
     return ret;
 }
 
+WarNode war_parse_old(WarNode node) {
+    using namespace std; using namespace llvm; using namespace whyr;
+    
+    WarNode ret;
+    ret.expr = new LogicExpressionOld(node.expr, warParserSource);
+    return ret;
+}
+
 // ================================
 // End of parser functions.
 // ================================
