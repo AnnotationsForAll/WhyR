@@ -2585,31 +2585,30 @@ theory Alloc
 end
 
 theory MemorySet
+    use import int.Int
     use import State
     use import Pointer
-    use import int.Int
     namespace import SET use import set.Set end
     
-    type t
-    type mem_set = SET.Set.set (pointer t)
+    type mem_set 'a = SET.Set.set (pointer 'a)
     
-    constant empty : mem_set = SET.Set.empty
+    constant empty : mem_set 'a = SET.Set.empty
     
-    function add (p:pointer 'a) (s:mem_set) :mem_set = (SET.Set.add (cast p) s)
+    function add (p:pointer 'a) (s:mem_set 'a) :(mem_set 'a) = (SET.Set.add p s)
     
-    predicate mem (pointer 'a) mem_set
-    axiom member_exact: forall p : (pointer 'a). forall s : mem_set.
-    (SET.Set.mem (cast p) s) -> (mem p s)
+    predicate mem (pointer 'a) (mem_set 'a)
+    axiom member_exact: forall p : pointer 'a. forall s : mem_set 'a.
+    (SET.Set.mem p s) -> (mem p s)
     (* TODO: p is in the set if it fully overlaps with another pointer in the set. *)
 
-    predicate subset (sub:mem_set) (super:mem_set) = forall x : (pointer t). mem x sub -> mem x super
+    predicate subset (sub:mem_set 'a) (super:mem_set 'a) = forall x : pointer 'a. mem x sub -> mem x super
     
-    function havoc state mem_set :state
-    axiom havoc: forall s ms. forall e : pointer 'a.
+    function havoc state (mem_set 'a) :state
+    axiom havoc: forall s. forall ms : mem_set 'a. forall e : pointer 'a.
     not (mem e ms) -> (load (havoc s ms) e) = (load s e)
     
-    function offset_memset mem_set (SET.Set.set int) :mem_set
-    axiom offset_memset: forall ms s i. forall p : (pointer 'a).
+    function offset_memset (mem_set 'a) (SET.Set.set int) :mem_set 'a
+    axiom offset_memset: forall s i. forall ms : mem_set 'a. forall p : pointer 'a.
     (mem p ms) /\ (SET.Set.mem i s) -> (mem (offset_pointer p i) (offset_memset ms s))
 end
 )";
