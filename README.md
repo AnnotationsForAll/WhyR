@@ -25,6 +25,7 @@ WhyR is a tool to convert programs written in [LLVM IR](http://llvm.org/) into a
  * Memory operations (loading, storing, checking if valid addresses...)
  * Global variables
 * Function contracts for function definitions
+* Specifications of assignable locations for functions
 * Assertions and assumptions for points in the program
 * Generation of annotations to ensure no undefined behavior occurs at runtime
 * The WhyR Annotation Language (WAR), a higher-level method of input to WhyR
@@ -115,7 +116,6 @@ There are more features to WhyR then just ensures and requires clauses. Learn mo
  * Indirect function calls
 * A better, more robust memory model
 * Support for alternate output formats
-* Ability to specify assignable locations to functions
 * Loop invariants and data invariants
 * Logical functions
 * Optimized Why3 output
