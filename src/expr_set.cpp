@@ -17,6 +17,8 @@ namespace whyr {
     static const int classID = LOGIC_EXPR_SET;
     LogicExpressionCreateSet::LogicExpressionCreateSet(LogicType* baseType, list<LogicExpression*> &elems, NodeSource* source) : LogicExpression(source), setType{LogicTypeSet(baseType)}, baseType{baseType}, elems{elems} {
         id = classID;
+        
+        
     }
     
     LogicExpressionCreateSet::~LogicExpressionCreateSet() {
@@ -65,6 +67,33 @@ namespace whyr {
             if (!type || !type->equals(baseType)) {
                 throw type_exception(("Cannot create a set of type '" + baseType->toString() + "' with an element of type '" + (*ii)->returnType()->toString() + "'"), this);
             }
+        }
+    }
+    
+    void LogicExpressionCreateSet::toWhy3(ostream &out, Why3Data &data) {
+        string theory;
+        if (isa<LogicTypeLLVM>(baseType) && cast<LogicTypeLLVM>(baseType)->getType()->isPointerTy()) {
+            data.importsNeeded.insert("MemorySet");
+            theory = "MemorySet";
+        } else {
+            data.importsNeeded.insert("set.Set");
+            theory = "Set";
+        }
+        
+        for (list<LogicExpression*>::iterator ii = elems.begin(); ii != elems.end(); ii++) {
+            out << "(" << theory << ".add (";
+            (*ii)->toWhy3(out, data);
+            out << ":";
+            (*ii)->returnType()->toWhy3(out, data);
+            out << ") ";
+        }
+        
+        out << "(" << theory << ".empty:";
+        setType.toWhy3(out, data);
+        out << ")";
+        
+        for (list<LogicExpression*>::iterator ii = elems.begin(); ii != elems.end(); ii++) {
+            out << ")";
         }
     }
     

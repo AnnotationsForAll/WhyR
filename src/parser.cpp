@@ -824,6 +824,61 @@ namespace whyr {
         }
     };
     
+    class ParserInSet : public ExpressionParser {
+    public:
+        LogicExpression* parse(const char* exprName, MDNode* node, NodeSource* source) {
+            requireMinArgs(node, exprName, source, 2);
+            requireMaxArgs(node, exprName, source, 2);
+            return new LogicExpressionInSet(parseMetadata(node->getOperand(1).get(), source), parseMetadata(node->getOperand(2).get(), source), source);
+        }
+    };
+    
+    class ParserSubset : public ExpressionParser {
+    public:
+        LogicExpression* parse(const char* exprName, MDNode* node, NodeSource* source) {
+            requireMinArgs(node, exprName, source, 2);
+            requireMaxArgs(node, exprName, source, 2);
+            return new LogicExpressionSubset(parseMetadata(node->getOperand(1).get(), source), parseMetadata(node->getOperand(2).get(), source), source);
+        }
+    };
+    
+    class ParserOld : public ExpressionParser {
+    public:
+        LogicExpression* parse(const char* exprName, MDNode* node, NodeSource* source) {
+            requireMinArgs(node, exprName, source, 1);
+            requireMaxArgs(node, exprName, source, 1);
+            return new LogicExpressionOld(parseMetadata(node->getOperand(1).get(), source), source);
+        }
+    };
+    
+    class ParserFresh : public ExpressionParser {
+    public:
+        bool value; ParserFresh(bool value) : value{value} {}
+        LogicExpression* parse(const char* exprName, MDNode* node, NodeSource* source) {
+            requireMinArgs(node, exprName, source, 1);
+            requireMaxArgs(node, exprName, source, 1);
+            return new LogicExpressionFresh(value, parseMetadata(node->getOperand(1).get(), source), source);
+        }
+    };
+    
+    class ParserRange : public ExpressionParser {
+    public:
+        LogicExpression* parse(const char* exprName, MDNode* node, NodeSource* source) {
+            requireMinArgs(node, exprName, source, 2);
+            requireMaxArgs(node, exprName, source, 2);
+            return new LogicExpressionRange(parseMetadata(node->getOperand(1).get(), source), parseMetadata(node->getOperand(2).get(), source), source);
+        }
+    };
+    
+    class ParserOffset : public ExpressionParser {
+    public:
+        LogicExpression* parse(const char* exprName, MDNode* node, NodeSource* source) {
+            requireMinArgs(node, exprName, source, 2);
+            requireMaxArgs(node, exprName, source, 2);
+            return new LogicExpressionOffset(parseMetadata(node->getOperand(1).get(), source), parseMetadata(node->getOperand(2).get(), source), source);
+        }
+    };
+    
     /* ==========================
      * PARSER REGISTRY DATA TABLE
      * ==========================
@@ -925,6 +980,13 @@ namespace whyr {
         {"blockaddress",new ParserBaddr()},
         {"struct",new ParserStructConst()},
         {"vector",new ParserVectorConst()},
+        {"in",new ParserInSet()},
+        {"subset",new ParserSubset()},
+        {"old",new ParserOld()},
+        {"fresh.before",new ParserFresh(true)},
+        {"fresh.after",new ParserFresh(false)},
+        {"range",new ParserRange()},
+        {"offset",new ParserOffset()},
     });
     map<string,ExpressionParser*>* ExpressionParser::getExpressionParsers() {
         return &parsers;

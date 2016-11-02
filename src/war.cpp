@@ -1089,6 +1089,71 @@ WarNode war_parse_vector_const(WarNode listNode) {
     return ret;
 }
 
+WarNode war_parse_set_type(WarNode typeNode) {
+    using namespace std; using namespace llvm; using namespace whyr;
+    
+    LogicType* baseType = cast<LogicTypeType>(typeNode.expr->returnType())->getType();
+    
+    WarNode ret;
+    ret.expr = new LogicExpressionConstantType(new LogicTypeType(new LogicTypeSet(baseType, warParserSource), warParserSource), warParserSource);
+    return ret;
+}
+
+WarNode war_parse_set_const(WarNode listNode) {
+    using namespace std; using namespace llvm; using namespace whyr;
+    
+    LogicType* baseType = listNode.exprs->front()->returnType();
+    
+    WarNode ret;
+    ret.expr = new LogicExpressionCreateSet(baseType, *listNode.exprs, warParserSource);
+    delete listNode.exprs;
+    return ret;
+}
+
+WarNode war_parse_in_op(WarNode lhs, WarNode rhs) {
+    using namespace std; using namespace llvm; using namespace whyr;
+    
+    WarNode ret;
+    if (lhs.expr->returnType()->equals(rhs.expr->returnType())) {
+        ret.expr = new LogicExpressionSubset(rhs.expr, lhs.expr, warParserSource);
+    } else {
+        ret.expr = new LogicExpressionInSet(rhs.expr, lhs.expr, warParserSource);
+    }
+    return ret;
+}
+
+WarNode war_parse_old(WarNode node) {
+    using namespace std; using namespace llvm; using namespace whyr;
+    
+    WarNode ret;
+    ret.expr = new LogicExpressionOld(node.expr, warParserSource);
+    return ret;
+}
+
+WarNode war_parse_fresh(bool before, WarNode node) {
+    using namespace std; using namespace llvm; using namespace whyr;
+    
+    WarNode ret;
+    ret.expr = new LogicExpressionFresh(before, node.expr, warParserSource);
+    return ret;
+}
+
+WarNode war_parse_range(WarNode lhs, WarNode rhs) {
+    using namespace std; using namespace llvm; using namespace whyr;
+    
+    WarNode ret;
+    ret.expr = new LogicExpressionRange(lhs.expr, rhs.expr, warParserSource);
+    return ret;
+}
+
+WarNode war_parse_offset(WarNode lhs, WarNode rhs) {
+    using namespace std; using namespace llvm; using namespace whyr;
+    
+    WarNode ret;
+    ret.expr = new LogicExpressionOffset(lhs.expr, rhs.expr, warParserSource);
+    return ret;
+}
+
 // ================================
 // End of parser functions.
 // ================================

@@ -97,6 +97,10 @@ namespace whyr {
          * Returns the source used to create this type. Can be NULL.
          */
         NodeSource* getSource();
+        /**
+         * Sets the source of this expression. Can be NULL.
+         */
+        void setSource(NodeSource* source);
         /// Converts the type to a human-readable format. This is NOT why3 format!
         virtual string toString();
         /**
@@ -148,6 +152,10 @@ namespace whyr {
          * Returns the source used to create this expression. Can be NULL.
          */
         NodeSource* getSource();
+        /**
+         * Sets the source of this expression. Can be NULL.
+         */
+        void setSource(NodeSource* source);
         /// Converts the type to a human-readable format. This is NOT why3 format!
         virtual string toString();
         /**

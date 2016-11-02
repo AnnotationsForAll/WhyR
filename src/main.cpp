@@ -43,27 +43,30 @@ enum Options {
     DISABLE_GOALS,
     COMBINE_GOALS,
     INPUT_FORMAT,
+    VACUOUS_CHECKS,
 };
 static const option::Descriptor usage[] = {
-    { UNKNOWN, 0, "", "", option::Arg::None,                    "USAGE: whyr [<option>...] <file>" },
-    { UNKNOWN, 0, "", "", option::Arg::None,                    "OPTIONS:" },
-    { HELP, 0, "h", "help", option::Arg::None,                  "    --help (-h)          - Prints this help information." },
-    { VERSION, 0, "v", "version", option::Arg::None,            "    --version (-v)       - Prints version information and exits." },
-    { OUTPUT, 0, "o", "output-file", requireArgument,           "    --output-file (-o)   - Send output to the given file." },
-    { WHY3_INT_MODE, 0, "", "why3-ints", requireArgument,       "    --why3-ints          - Change how LLVM integers are modeled in Why3." },
-    { UNKNOWN, 0, "", "", option::Arg::None,                    "                           Valid values: 'int', 'bv'" },
-    { WHY3_FLOAT_MODE, 0, "", "why3-floats", requireArgument,   "    --why3-floats        - Change how LLVM floats are modeled in Why3." },
-    { UNKNOWN, 0, "", "", option::Arg::None,                    "                           Valid values: 'real', 'fp'" },
-    { WERROR, 0, "W", "werror", option::Arg::None,              "    --werror (-W)        - Make all warnings treated as errors." },
-    { NO_WARN, 0, "w", "no-warn", option::Arg::None,            "    --no-warn (-w)       - Disable warning messages." },
-    { WHY3_MEM_MODEL, 0, "m", "why3-model", requireArgument,    "    --why3-model (-m)    - Sets the memory model, used for proving programs with state." },
-    { UNKNOWN, 0, "", "", option::Arg::None,                    "                           Valid values: 'default', 'dummy'" },
-    { ENABLE_RTE, 0, "r", "rte", option::Arg::None,             "    --rte (-r)           - Enables RTE assertion generation." },
-    { DISABLE_GOALS, 0, "g", "no-goals", option::Arg::None,     "    --no-goals (-g)      - Disables goal generation. Only generates theories." },
-    { COMBINE_GOALS, 0, "G", "combine-goals", option::Arg::None,"    --combine-goals (-G) - For each function, combines all goals into one." },
-    { INPUT_FORMAT, 0, "f", "format", requireArgument,          "    --format (-f)        - Change what input format WhyR reads input files as." },
-    { UNKNOWN, 0, "", "", option::Arg::None,                    "                           Valid values: 'auto', 'bc', 'll'" },
-    
+    { UNKNOWN, 0, "", "", option::Arg::None,                        "USAGE: whyr [<option>...] <file>" },
+    { UNKNOWN, 0, "", "", option::Arg::None,                        "OPTIONS:" },
+    { HELP, 0, "h", "help", option::Arg::None,                      "    --help (-h)           - Prints this help information." },
+    { VERSION, 0, "v", "version", option::Arg::None,                "    --version (-v)        - Prints version information and exits." },
+    { OUTPUT, 0, "o", "output-file", requireArgument,               "    --output-file (-o)    - Send output to the given file." },
+    { WHY3_INT_MODE, 0, "", "why3-ints", requireArgument,           "    --why3-ints           - Change how LLVM integers are modeled in Why3." },
+    { UNKNOWN, 0, "", "", option::Arg::None,                        "                            Valid values: 'int', 'bv'" },
+    { WHY3_FLOAT_MODE, 0, "", "why3-floats", requireArgument,       "    --why3-floats         - Change how LLVM floats are modeled in Why3." },
+    { UNKNOWN, 0, "", "", option::Arg::None,                        "                            Valid values: 'real', 'fp'" },
+    { WERROR, 0, "W", "werror", option::Arg::None,                  "    --werror (-W)         - Make all warnings treated as errors." },
+    { NO_WARN, 0, "w", "no-warn", option::Arg::None,                "    --no-warn (-w)        - Disable warning messages." },
+    { WHY3_MEM_MODEL, 0, "m", "why3-model", requireArgument,        "    --why3-model (-m)     - Sets the memory model, used for proving programs with state." },
+    { UNKNOWN, 0, "", "", option::Arg::None,                        "                            Valid values: 'default', 'dummy'" },
+    { ENABLE_RTE, 0, "r", "rte", option::Arg::None,                 "    --rte (-r)            - Enables RTE assertion generation." },
+    { DISABLE_GOALS, 0, "g", "no-goals", option::Arg::None,         "    --no-goals (-g)       - Disables goal generation. Only generates theories." },
+    { COMBINE_GOALS, 0, "G", "combine-goals", option::Arg::None,    "    --combine-goals (-G)  - For each function, combines all goals into one." },
+    { INPUT_FORMAT, 0, "f", "format", requireArgument,              "    --format (-f)         - Change what input format WhyR reads input files as." },
+    { UNKNOWN, 0, "", "", option::Arg::None,                        "                            Valid values: 'auto', 'bc', 'll'" },
+    { VACUOUS_CHECKS, 0, "V", "vacuous-checks", option::Arg::None,  "    --vacuous-checks (-V) - If specified, adds vacuous assertions to all goals." },
+    { UNKNOWN, 0, "", "", option::Arg::None,                        "                            A vacuous goal is intended to fail or time out." },
+    { UNKNOWN, 0, "", "", option::Arg::None,                        "                            if a vacuous goal passes, there is a contradiction in logic." },
     { 0, 0, 0, 0, 0, 0 }
 };
 
@@ -135,6 +138,7 @@ int main(int argc, char** argv) {
     if (options[ENABLE_RTE]) settings.rte = true;
     if (options[DISABLE_GOALS]) settings.noGoals = true;
     if (options[COMBINE_GOALS]) settings.combineGoals = true;
+    if (options[VACUOUS_CHECKS]) settings.vacuousChecks = true;
     
     if (options[WHY3_MEM_MODEL]) {
         std::string optstr(options[WHY3_MEM_MODEL].arg);

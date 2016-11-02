@@ -439,6 +439,15 @@ theory CustomTruncate
     axiom Truncate_monotonic_int1: forall x:real, i:int. x <= from_int i -> Int.(<=) (truncate x) i
     axiom Truncate_monotonic_int2: forall x:real, i:int. from_int i <= x -> Int.(<=) i (truncate x)
 end
+
+theory Range
+    use import int.Int
+    use import set.Set
+    
+    function range int int :(set int)
+    axiom range: forall i j x. x >= i /\ x < j <-> (mem x (range i j))
+    axiom range_neg: forall i j x. x < i \/ x >= j <-> not (mem x (range i j))
+end
 )";
 
     void addImports(ostream &out, NodeSource* source, TypeInfo &info) {
@@ -735,6 +744,23 @@ end
                     out << "            constant entry_state = " << getWhy3StatepointBefore(func, inst) << endl;
                 }
                 out << "    end" << endl;
+                
+                // if we have an assigns clause, we need to import what it needs
+                if (calledFunc->getAssignsLocations()) {
+                    TypeInfo info;
+                    Why3Data data;
+                    data.module = func->getModule();
+                    data.source = new NodeSource(func, inst);
+                    data.info = &info;
+                    data.statepoint = getWhy3StatepointBefore(func, inst);
+                    
+                    ostringstream discarded;
+                    for (list<LogicExpression*>::iterator ii = calledFunc->getAssignsLocations()->begin(); ii != calledFunc->getAssignsLocations()->end(); ii++) {
+                        (*ii)->toWhy3(discarded, data);
+                    }
+                    
+                    addImports(out, data);
+                }
                 
                 break;
             }
@@ -1642,6 +1668,30 @@ end
                     addOperand(out, func->getModule(), inst, func);
                     out << " = " << calleeTheoryName << ".F.ret_val -> ";
                 }
+                
+                // if there's an assigns clause, we can specify how the state changed when the function was called
+                if (calledFunc->getAssignsLocations()) {
+                    TypeInfo info;
+                    Why3Data data;
+                    data.module = func->getModule();
+                    data.source = new NodeSource(func, inst);
+                    data.info = &info;
+                    data.statepoint = getWhy3StatepointBefore(func, inst);
+                    
+                    out << calleeTheoryName << ".F.exit_state = ";
+                    for (list<LogicExpression*>::iterator ii = calledFunc->getAssignsLocations()->begin(); ii != calledFunc->getAssignsLocations()->end(); ii++) {
+                        out << "(havoc ";
+                    }
+                    out << data.statepoint;
+                    for (list<LogicExpression*>::iterator ii = calledFunc->getAssignsLocations()->begin(); ii != calledFunc->getAssignsLocations()->end(); ii++) {
+                        out << " ";
+                        (*ii)->toWhy3(out, data);
+                        out << ")";
+                    }
+                    
+                    out << " -> ";
+                }
+                
                 out << calleeTheoryName << ".F.function_ensures";
                 out << " -> " << getWhy3StatepointBefore(func, inst->getNextNode()) << " = " << calleeTheoryName << ".F.exit_state";
                 break;
@@ -1871,6 +1921,10 @@ end
         // add the goal, if we have one
         if ((func->getModule()->getSettings() && func->getModule()->getSettings()->combineGoals) || goalExpr) {
             out << "    goal " << theoryName << ": function_requires -> execute" << endl;
+            
+            if (func->getModule()->getSettings() && func->getModule()->getSettings()->vacuousChecks) {
+                out << "    goal " << theoryName << "_vacuous: (function_requires /\\ execute) -> false" << endl;
+            }
         }
         out << "end" << endl << endl;
     }
@@ -2529,6 +2583,38 @@ theory Alloc
             offset = 0;
         } in
     (new_s,new_p)
+    
+    predicate allocated_before (s:state) (p:pointer 'a) = s.n_allocs < p.base
+    predicate allocated_after (s:state) (p:pointer 'a) = s.n_allocs >= p.base
+end
+
+theory MemorySet
+    use import int.Int
+    use import State
+    use import Pointer
+    namespace import SET use import set.Set end
+    
+    type mem_set 'a = SET.Set.set (pointer 'a)
+    
+    constant empty : mem_set 'a = SET.Set.empty
+    
+    function add (p:pointer 'a) (s:mem_set 'a) :(mem_set 'a) = (SET.Set.add p s)
+    
+    predicate mem (pointer 'a) (mem_set 'a)
+    axiom member_exact: forall p : pointer 'a. forall s : mem_set 'a.
+    (SET.Set.mem p s) -> (mem p s)
+    axiom member_overlap: forall p q : pointer 'a. forall s : mem_set 'a.
+    (SET.Set.mem p s) /\ p.offset <= q.offset /\ p.offset + (bits p) >= q.offset + (bits q) -> (mem q s)
+    
+    predicate subset (sub:mem_set 'a) (super:mem_set 'a) = forall x : pointer 'a. mem x sub -> mem x super
+    
+    function havoc state (mem_set 'a) :state
+    axiom havoc: forall s. forall ms : mem_set 'a. forall e : pointer 'a.
+    not (mem e ms) -> (load (havoc s ms) e) = (load s e)
+    
+    function offset_memset (mem_set 'a) (SET.Set.set int) :mem_set 'a
+    axiom offset_memset: forall s i. forall ms : mem_set 'a. forall p : pointer 'a.
+    (mem p ms) /\ (SET.Set.mem i s) -> (mem (offset_pointer p i) (offset_memset ms s))
 end
 )";
 
@@ -2554,6 +2640,22 @@ theory Alloc
     use import int.Int
     
     function alloc state int :(state,pointer)
+    predicate allocated_before state pointer
+    predicate allocated_after state pointer
+end
+
+theory MemorySet
+    use import State
+    use import Pointer
+    use import int.Int
+    namespace import SET use import set.Set end
+    
+    type mem_set
+    constant empty : mem_set
+    function add pointer mem_set :mem_set
+    predicate mem pointer mem_set
+    function havoc state mem_set :state
+    function offset_memset mem_set (SET.Set.set int) :mem_set
 end
 )";
     

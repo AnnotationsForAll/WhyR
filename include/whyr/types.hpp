@@ -85,6 +85,7 @@ namespace whyr {
         virtual string toString();
         virtual LogicType* commonType(LogicType* other);
         virtual bool equals(LogicType* other);
+        virtual void toWhy3(ostream &out, Why3Data &data);
         
         static bool classof(const LogicType* type);
     };

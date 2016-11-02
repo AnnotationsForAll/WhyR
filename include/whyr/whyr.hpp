@@ -89,6 +89,8 @@ namespace whyr {
         bool noGoals = false;
         /// If true, all goals are combined instead of split and copied.
         bool combineGoals = false;
+        /// If true, add vacuous checks- Goals that try to prove false. Used for finding contradictions in logic.
+        bool vacuousChecks = false;
     };
 }
 

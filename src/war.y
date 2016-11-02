@@ -1,6 +1,6 @@
 %token TOKEN_VAR TOKEN_VAR_EXT TOKEN_INT TOKEN_REAL TOKEN_WORD
-%token TOKEN_TRUE TOKEN_FALSE TOKEN_FORALL TOKEN_EXISTS TOKEN_LET TOKEN_RESULT TOKEN_ZEXT TOKEN_SEXT TOKEN_NULL TOKEN_MIN TOKEN_MAX TOKEN_BADDR
-%token TOKEN_TYPE_LLVM_INT TOKEN_TYPE_INT TOKEN_TYPE_BOOL TOKEN_TYPE_REAL TOKEN_TYPE_LLVM_FLOAT TOKEN_TYPE_LLVM_DOUBLE TOKEN_TYPE_STRUCT TOKEN_TYPE_VECTOR
+%token TOKEN_TRUE TOKEN_FALSE TOKEN_FORALL TOKEN_EXISTS TOKEN_LET TOKEN_RESULT TOKEN_ZEXT TOKEN_SEXT TOKEN_NULL TOKEN_MIN TOKEN_MAX TOKEN_BADDR TOKEN_OP_IN TOKEN_OLD TOKEN_FRESH TOKEN_BEFORE TOKEN_AFTER TOKEN_OFFSET TOKEN_RANGE
+%token TOKEN_TYPE_LLVM_INT TOKEN_TYPE_INT TOKEN_TYPE_BOOL TOKEN_TYPE_REAL TOKEN_TYPE_LLVM_FLOAT TOKEN_TYPE_LLVM_DOUBLE TOKEN_TYPE_STRUCT TOKEN_TYPE_VECTOR TOKEN_TYPE_SET
 %token TOKEN_OP_IMP TOKEN_OP_BIDIR_IMP TOKEN_OP_AND TOKEN_OP_OR TOKEN_OP_EQ TOKEN_OP_NEQ TOKEN_OP_GE TOKEN_OP_LE
 %token TOKEN_OP_SDIV TOKEN_OP_UDIV TOKEN_OP_REM TOKEN_OP_SREM TOKEN_OP_UREM TOKEN_OP_MOD TOKEN_OP_SMOD TOKEN_OP_UMOD TOKEN_OP_LSHL TOKEN_OP_LSHR TOKEN_OP_ASHR
 %token TOKEN_OP_UGT TOKEN_OP_UGE TOKEN_OP_ULT TOKEN_OP_ULE TOKEN_OP_SGT TOKEN_OP_SGE TOKEN_OP_SLT TOKEN_OP_SLE
@@ -14,15 +14,16 @@
 %right TOKEN_OP_IMP TOKEN_OP_BIDIR_IMP
 %left TOKEN_OP_OR
 %left TOKEN_OP_AND
+%left TOKEN_RANGE
 %left '|'
 %left '^'
 %left '&'
-%left TOKEN_OP_EQ TOKEN_OP_NEQ
+%left TOKEN_OP_EQ TOKEN_OP_NEQ TOKEN_OP_IN
 %left '<' '>' TOKEN_OP_LE TOKEN_OP_GE TOKEN_OP_UGT TOKEN_OP_UGE TOKEN_OP_ULT TOKEN_OP_ULE TOKEN_OP_SGT TOKEN_OP_SGE TOKEN_OP_SLT TOKEN_OP_SLE TOKEN_OP_FOEQ TOKEN_OP_FOGT TOKEN_OP_FOGE TOKEN_OP_FOLT TOKEN_OP_FOLE TOKEN_OP_FONE TOKEN_OP_FORD TOKEN_OP_FUEQ TOKEN_OP_FUGT TOKEN_OP_FUGE TOKEN_OP_FULT TOKEN_OP_FULE TOKEN_OP_FUNE TOKEN_OP_FUNO
 %left TOKEN_OP_LSHL TOKEN_OP_LSHR TOKEN_OP_ASHR
-%left '+' '-'
+%left '+' '-' TOKEN_OFFSET
 %left '*' '/' TOKEN_OP_SDIV TOKEN_OP_UDIV TOKEN_OP_REM TOKEN_OP_SREM TOKEN_OP_UREM TOKEN_OP_MOD TOKEN_OP_SMOD TOKEN_OP_UMOD
-%right PREC_CAST '!' '~' PREC_UMINUS PREC_REF PREC_DEREF
+%right PREC_CAST '!' '~' PREC_UMINUS PREC_REF PREC_DEREF TOKEN_OLD TOKEN_FRESH TOKEN_BEFORE TOKEN_AFTER
 %left '[' ']' '{' '}'
 %%
 top_level:
@@ -69,6 +70,7 @@ typeid:
     | TOKEN_TYPE_STRUCT TOKEN_PACKED_STRUCT_BEGIN type_list TOKEN_PACKED_STRUCT_END
                                                     { $$ = war_parse_anon_struct_type(true , $3); }
     | typeid '[' TOKEN_INT ']' TOKEN_TYPE_VECTOR    { $$ = war_parse_vector_type($1, $3); }
+    | typeid TOKEN_TYPE_SET                         { $$ = war_parse_set_type($2); }
     ;
 cast:
       '(' typeid ')' expr                           %prec PREC_CAST
@@ -92,9 +94,10 @@ cast:
     | '(' typeid ')' TOKEN_TYPE_STRUCT '{' array_item '}'
                                                     %prec PREC_CAST
                                                     { $$ = war_parse_struct_const($2, $6); }
-    | '(' TOKEN_TYPE_VECTOR ')' '{' array_item '}'
-                                                    %prec PREC_CAST
+    | '(' TOKEN_TYPE_VECTOR ')' '{' array_item '}'  %prec PREC_CAST
                                                     { $$ = war_parse_vector_const($5); }
+    | '(' TOKEN_TYPE_SET ')' '{' array_item '}'     %prec PREC_CAST
+                                                    { $$ = war_parse_set_const($5); }
     ;
 declare_item:
         typeid TOKEN_VAR                            { $$ = war_parse_decl_item($1, $2); }
@@ -141,11 +144,13 @@ expr:
     | expr TOKEN_OP_BIDIR_IMP expr                  { $$ = war_parse_bin_bool_op('b', $1, $3); }
     | expr TOKEN_OP_AND expr                        { $$ = war_parse_bin_bool_op('&', $1, $3); }
     | expr TOKEN_OP_OR expr                         { $$ = war_parse_bin_bool_op('|', $1, $3); }
+    | expr TOKEN_RANGE expr                         { $$ = war_parse_range($1, $3); }
     | expr '|' expr                                 { $$ = war_parse_bin_bits_op('|', $1, $3); }
     | expr '^' expr                                 { $$ = war_parse_bin_bits_op('^', $1, $3); }
     | expr '&' expr                                 { $$ = war_parse_bin_bits_op('&', $1, $3); }
     | expr TOKEN_OP_EQ expr                         { $$ = war_parse_eq_op(false, $1, $3); }
     | expr TOKEN_OP_NEQ expr                        { $$ = war_parse_eq_op(true , $1, $3); }
+    | expr TOKEN_OP_IN expr                         { $$ = war_parse_in_op($1, $3); }
     | expr '<' expr                                 { $$ = war_parse_bin_comp_op('<', $1, $3); }
     | expr TOKEN_OP_LE expr                         { $$ = war_parse_bin_comp_op(',', $1, $3); }
     | expr '>' expr                                 { $$ = war_parse_bin_comp_op('>', $1, $3); }
@@ -175,6 +180,7 @@ expr:
     | expr TOKEN_OP_LSHL expr                       { $$ = war_parse_shift_op('<', $1, $3); }
     | expr TOKEN_OP_LSHR expr                       { $$ = war_parse_shift_op('>', $1, $3); }
     | expr TOKEN_OP_ASHR expr                       { $$ = war_parse_shift_op('?', $1, $3); }
+    | expr TOKEN_OFFSET expr                         { $$ = war_parse_offset($1, $3); }
     | expr '+' expr                                 { $$ = war_parse_bin_math_op('+', $1, $3); }
     | expr '-' expr                                 { $$ = war_parse_bin_math_op('-', $1, $3); }
     | expr '*' expr                                 { $$ = war_parse_bin_math_op('*', $1, $3); }
@@ -195,6 +201,9 @@ expr:
                                                     { $$ = war_parse_load($2); }
     | '&' expr                                      %prec PREC_REF
                                                     { $$ = war_parse_ref($2); }
+    | TOKEN_OLD expr                                { $$ = war_parse_old($2); }
+    | TOKEN_FRESH TOKEN_BEFORE expr                 { $$ = war_parse_fresh(true , $3); }
+    | TOKEN_FRESH TOKEN_AFTER expr                  { $$ = war_parse_fresh(false, $3); }
     | TOKEN_BADDR '(' expr ',' TOKEN_VAR ')'        { $$ = war_parse_baddr($3, $5); }
     | TOKEN_BADDR '(' expr ',' TOKEN_VAR_EXT ')'    { $$ = war_parse_baddr_ext($3, $5); }
     | expr '[' expr ']'                             { $$ = war_parse_index($1, $3); }

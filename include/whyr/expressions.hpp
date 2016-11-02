@@ -71,6 +71,12 @@ namespace whyr {
         LOGIC_EXPR_BADDR,
         LOGIC_EXPR_LLVM_STRUCT_CONST,
         LOGIC_EXPR_LLVM_VECTOR_CONST,
+        LOGIC_EXPR_IN_SET,
+        LOGIC_EXPR_SUBSET,
+        LOGIC_EXPR_OLD,
+        LOGIC_EXPR_FRESH,
+        LOGIC_EXPR_RANGE,
+        LOGIC_EXPR_OFFSET,
     };
     
     /**
@@ -136,6 +142,7 @@ namespace whyr {
         virtual string toString();
         virtual LogicType* returnType();
         virtual void checkTypes();
+        virtual void toWhy3(ostream &out, Why3Data &data);
         
         static bool classof(const LogicExpression* expr);
     };
@@ -1109,6 +1116,131 @@ namespace whyr {
         list<LogicExpression*>* getElems();
         
         virtual ~LogicExpressionLLVMVectorConstant();
+        virtual string toString();
+        virtual LogicType* returnType();
+        virtual void checkTypes();
+        virtual void toWhy3(ostream &out, Why3Data &data);
+        
+        static bool classof(const LogicExpression* expr);
+    };
+    
+    /**
+     * This is a boolean operator that takes a set and an element, and checks if that element is in the set.
+     */
+    class LogicExpressionInSet : public LogicExpression {
+    protected:
+        LogicExpression* setExpr;
+        LogicExpression* itemExpr;
+    public:
+        LogicExpressionInSet(LogicExpression* setExpr, LogicExpression* itemExpr, NodeSource* source = NULL);
+        LogicExpression* getSetExpr();
+        LogicExpression* getItemExpr();
+        
+        virtual ~LogicExpressionInSet();
+        virtual string toString();
+        virtual LogicType* returnType();
+        virtual void checkTypes();
+        virtual void toWhy3(ostream &out, Why3Data &data);
+        
+        static bool classof(const LogicExpression* expr);
+    };
+    
+    /**
+     * This is a boolean operator that takes a set and an element, and checks if that element is in the set.
+     */
+    class LogicExpressionSubset : public LogicExpression {
+    protected:
+        LogicExpression* subExpr;
+        LogicExpression* superExpr;
+    public:
+        LogicExpressionSubset(LogicExpression* subExpr, LogicExpression* superExpr, NodeSource* source = NULL);
+        LogicExpression* getSubExpr();
+        LogicExpression* getSuperExpr();
+        
+        virtual ~LogicExpressionSubset();
+        virtual string toString();
+        virtual LogicType* returnType();
+        virtual void checkTypes();
+        virtual void toWhy3(ostream &out, Why3Data &data);
+        
+        static bool classof(const LogicExpression* expr);
+    };
+    
+    /**
+     * This evaluates an expression at an earlier statepoint, which is the beginning of the function.
+     */
+    class LogicExpressionOld : public LogicExpression {
+    protected:
+        LogicExpression* expr;
+    public:
+        LogicExpressionOld(LogicExpression* expr, NodeSource* source = NULL);
+        LogicExpression* getExpr();
+        
+        virtual ~LogicExpressionOld();
+        virtual string toString();
+        virtual LogicType* returnType();
+        virtual void checkTypes();
+        virtual void toWhy3(ostream &out, Why3Data &data);
+        
+        static bool classof(const LogicExpression* expr);
+    };
+    
+    /**
+     * This finds if a certain pointer points to a block that was allocated before or after the current state.
+     */
+    class LogicExpressionFresh : public LogicExpression {
+    protected:
+        bool before;
+        LogicExpression* expr;
+    public:
+        LogicExpressionFresh(bool before, LogicExpression* expr, NodeSource* source = NULL);
+        LogicExpression* getExpr();
+        
+        virtual ~LogicExpressionFresh();
+        virtual string toString();
+        virtual LogicType* returnType();
+        virtual void checkTypes();
+        virtual void toWhy3(ostream &out, Why3Data &data);
+        
+        static bool classof(const LogicExpression* expr);
+    };
+    
+    /**
+     * This constructs a set of integers representing a range from 'begin' to 'end'.
+     */
+    class LogicExpressionRange : public LogicExpression {
+    protected:
+        LogicExpression* begin;
+        LogicExpression* end;
+        LogicType* retType;
+    public:
+        LogicExpressionRange(LogicExpression* begin, LogicExpression* end, NodeSource* source = NULL);
+        LogicExpression* getBegin();
+        LogicExpression* getEnd();
+        
+        virtual ~LogicExpressionRange();
+        virtual string toString();
+        virtual LogicType* returnType();
+        virtual void checkTypes();
+        virtual void toWhy3(ostream &out, Why3Data &data);
+        
+        static bool classof(const LogicExpression* expr);
+    };
+    
+    /**
+     * This does basic pointer arithmetic. It takes a pointer and a logical integer offset (or two sets thereof).
+     * Note that the offset amount is in BITS!
+     */
+    class LogicExpressionOffset : public LogicExpression {
+    protected:
+        LogicExpression* pointer;
+        LogicExpression* offset;
+    public:
+        LogicExpressionOffset(LogicExpression* pointer, LogicExpression* offset, NodeSource* source = NULL);
+        LogicExpression* getPointer();
+        LogicExpression* getOffset();
+        
+        virtual ~LogicExpressionOffset();
         virtual string toString();
         virtual LogicType* returnType();
         virtual void checkTypes();

@@ -104,6 +104,7 @@ namespace whyr {
         Function* llvm;
         LogicExpression* requires = NULL;
         LogicExpression* ensures = NULL;
+        bool hasAssgins = false;
         list<LogicExpression*> assigns;
         list<AnnotatedInstruction*> annotatedInsts;
     public:
@@ -140,7 +141,8 @@ namespace whyr {
          */
         LogicExpression* getEnsuresClause();
         /**
-         * Returns the list of memory locations that this function is allowed to assign to. TODO: specify NULL behavior?
+         * Returns the list of memory locations that this function is allowed to assign to.
+         * If it is NULL, this function was not given an assigns clause.
          * 
          * This object owns the resulting list, and all elements. It will free them on deletion.
          */
