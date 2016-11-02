@@ -32,40 +32,8 @@ namespace whyr {
         return false;
     }
     
-    LogicType* LogicType::commonType(LogicType* other) {
-        return NULL;
-    }
-    
     bool LogicType::equals(LogicType* other) {
         return this == other;
-    }
-    
-    LogicType* LogicType::commonType(LogicType* a, LogicType* b) {
-        // if a = b, they obviously have a common type
-        if (a->equals(b)) {
-            return a;
-        }
-        
-        // handle NULLs without crashing
-        if (!a) {
-            return b;
-        }
-        if (!b) {
-            return a;
-        }
-        
-        // if a is common to b, or b is common to a, then a and b have a common type
-        LogicType* x = a->commonType(b);
-        LogicType* y = b->commonType(a);
-        
-        if (!x) {
-            return y;
-        }
-        if (!y) {
-            return x;
-        }
-        
-        return LogicType::commonType(x, y);
     }
     
     void LogicType::toWhy3(ostream &out, Why3Data &data) {

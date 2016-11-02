@@ -27,17 +27,6 @@ namespace whyr {
         return sb.str();
     }
     
-    LogicType* LogicTypeSet::commonType(LogicType* other) {
-        // this has a common type only if the other type is a set and the element classes have a common type
-        if (isa<LogicTypeSet>(other)) {
-            LogicType* common = LogicType::commonType(this->type, cast<LogicTypeSet>(other)->type);
-            if (common) {
-                return new LogicTypeSet(common, source);
-            }
-        }
-        return NULL;
-    }
-    
     bool LogicTypeSet::equals(LogicType* other) {
         // Two of these have an equal type if they have the same member type
         return isa<LogicTypeSet>(other) && this->type->equals(cast<LogicTypeSet>(other)->type);

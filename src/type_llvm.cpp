@@ -30,29 +30,6 @@ namespace whyr {
         return sb.str();
     }
     
-    LogicType* LogicTypeLLVM::commonType(LogicType* other) {
-        if (isa<LogicTypeLLVM>(other)) {
-            if (this->equals(other)) { // If they're the exact same underlying type, they're valid
-                return this;
-            } else {
-                LogicTypeLLVM* otherLLVM = cast<LogicTypeLLVM>(other);
-                
-                if (this->type->isPointerTy() && otherLLVM->type->isPointerTy()) { // void* to/from casts are always valid
-                    if (this->type->getPointerElementType()->isVoidTy()) {
-                        return this;
-                    }
-                    if (otherLLVM->type->getPointerElementType()->isVoidTy()) {
-                        return other;
-                    }
-                }
-                
-                return NULL;
-            }
-        } else {
-            return NULL;
-        }
-    }
-    
     bool LogicTypeLLVM::equals(LogicType* other) {
         // types are equal only if they share the same underlying LLVM type too
         return isa<LogicTypeLLVM>(other) && this->type == cast<LogicTypeLLVM>(other)->type;

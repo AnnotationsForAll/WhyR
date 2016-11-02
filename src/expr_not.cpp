@@ -40,8 +40,8 @@ namespace whyr {
     void LogicExpressionNot::checkTypes() {
         rhs->checkTypes();
         
-        // both arguments must be boolean
-        if (!LogicType::commonType(rhs->returnType(), &retType)) {
+        // argument must be boolean
+        if (!isa<LogicTypeBool>(rhs->returnType())) {
             throw type_exception(("Operator 'not' undefined on type '" + rhs->returnType()->toString() + "'"), this);
         }
     }

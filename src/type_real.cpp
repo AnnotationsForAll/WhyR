@@ -22,10 +22,6 @@ namespace whyr {
         return "real";
     }
     
-    LogicType* LogicTypeReal::commonType(LogicType* other) {
-        return NULL;
-    }
-    
     bool LogicTypeReal::equals(LogicType* other) {
         return isa<LogicTypeReal>(other);
     }

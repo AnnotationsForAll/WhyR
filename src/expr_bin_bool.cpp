@@ -61,7 +61,7 @@ namespace whyr {
         rhs->checkTypes();
         
         // both arguments must be boolean
-        if (!LogicType::commonType(lhs->returnType(), &retType) || !LogicType::commonType(rhs->returnType(), &retType)) {
+        if (!isa<LogicTypeBool>(lhs->returnType()) || !lhs->returnType()->equals(rhs->returnType())) {
             throw type_exception(("Operator" + opString(op) + "undefined between types '" + lhs->returnType()->toString() + "' and '" + rhs->returnType()->toString() + "'"), this);
         }
     }

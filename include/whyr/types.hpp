@@ -48,7 +48,6 @@ namespace whyr {
         
         virtual ~LogicTypeLLVM();
         virtual string toString();
-        virtual LogicType* commonType(LogicType* other);
         virtual bool equals(LogicType* other);
         virtual void toWhy3(ostream &out, Why3Data &data);
         
@@ -64,7 +63,6 @@ namespace whyr {
         
         virtual ~LogicTypeBool();
         virtual string toString();
-        virtual LogicType* commonType(LogicType* other);
         virtual bool equals(LogicType* other);
         virtual void toWhy3(ostream &out, Why3Data &data);
         
@@ -83,7 +81,6 @@ namespace whyr {
         
         virtual ~LogicTypeSet();
         virtual string toString();
-        virtual LogicType* commonType(LogicType* other);
         virtual bool equals(LogicType* other);
         virtual void toWhy3(ostream &out, Why3Data &data);
         
@@ -104,7 +101,6 @@ namespace whyr {
         
         virtual ~LogicTypeType();
         virtual string toString();
-        virtual LogicType* commonType(LogicType* other);
         virtual bool equals(LogicType* other);
         
         static bool classof(const LogicType* type);
@@ -119,7 +115,6 @@ namespace whyr {
         
         virtual ~LogicTypeInt();
         virtual string toString();
-        virtual LogicType* commonType(LogicType* other);
         virtual bool equals(LogicType* other);
         virtual void toWhy3(ostream &out, Why3Data &data);
         
@@ -135,7 +130,6 @@ namespace whyr {
         
         virtual ~LogicTypeReal();
         virtual string toString();
-        virtual LogicType* commonType(LogicType* other);
         virtual bool equals(LogicType* other);
         virtual void toWhy3(ostream &out, Why3Data &data);
         
