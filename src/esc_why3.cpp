@@ -1921,6 +1921,10 @@ end
         // add the goal, if we have one
         if ((func->getModule()->getSettings() && func->getModule()->getSettings()->combineGoals) || goalExpr) {
             out << "    goal " << theoryName << ": function_requires -> execute" << endl;
+            
+            if (func->getModule()->getSettings() && func->getModule()->getSettings()->vacuousChecks) {
+                out << "    goal " << theoryName << "_vacuous: (function_requires /\\ execute) -> false" << endl;
+            }
         }
         out << "end" << endl << endl;
     }
