@@ -2599,8 +2599,9 @@ theory MemorySet
     predicate mem (pointer 'a) (mem_set 'a)
     axiom member_exact: forall p : pointer 'a. forall s : mem_set 'a.
     (SET.Set.mem p s) -> (mem p s)
-    (* TODO: p is in the set if it fully overlaps with another pointer in the set. *)
-
+    axiom member_overlap: forall p q : pointer 'a. forall s : mem_set 'a.
+    (SET.Set.mem p s) /\ p.offset <= q.offset /\ p.offset + (bits p) >= q.offset + (bits q) -> (mem q s)
+    
     predicate subset (sub:mem_set 'a) (super:mem_set 'a) = forall x : pointer 'a. mem x sub -> mem x super
     
     function havoc state (mem_set 'a) :state
