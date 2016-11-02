@@ -75,6 +75,8 @@ namespace whyr {
         LOGIC_EXPR_SUBSET,
         LOGIC_EXPR_OLD,
         LOGIC_EXPR_FRESH,
+        LOGIC_EXPR_RANGE,
+        LOGIC_EXPR_OFFSET,
     };
     
     /**
@@ -1195,6 +1197,50 @@ namespace whyr {
         LogicExpression* getExpr();
         
         virtual ~LogicExpressionFresh();
+        virtual string toString();
+        virtual LogicType* returnType();
+        virtual void checkTypes();
+        virtual void toWhy3(ostream &out, Why3Data &data);
+        
+        static bool classof(const LogicExpression* expr);
+    };
+    
+    /**
+     * This constructs a set of integers representing a range from 'begin' to 'end'.
+     */
+    class LogicExpressionRange : public LogicExpression {
+    protected:
+        LogicExpression* begin;
+        LogicExpression* end;
+        LogicType* retType;
+    public:
+        LogicExpressionRange(LogicExpression* begin, LogicExpression* end, NodeSource* source = NULL);
+        LogicExpression* getBegin();
+        LogicExpression* getEnd();
+        
+        virtual ~LogicExpressionRange();
+        virtual string toString();
+        virtual LogicType* returnType();
+        virtual void checkTypes();
+        virtual void toWhy3(ostream &out, Why3Data &data);
+        
+        static bool classof(const LogicExpression* expr);
+    };
+    
+    /**
+     * This does basic pointer arithmetic. It takes a pointer and a logical integer offset (or two sets thereof).
+     * Note that the offset amount is in BITS!
+     */
+    class LogicExpressionOffset : public LogicExpression {
+    protected:
+        LogicExpression* pointer;
+        LogicExpression* offset;
+    public:
+        LogicExpressionOffset(LogicExpression* pointer, LogicExpression* offset, NodeSource* source = NULL);
+        LogicExpression* getPointer();
+        LogicExpression* getOffset();
+        
+        virtual ~LogicExpressionOffset();
         virtual string toString();
         virtual LogicType* returnType();
         virtual void checkTypes();

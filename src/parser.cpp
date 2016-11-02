@@ -861,6 +861,24 @@ namespace whyr {
         }
     };
     
+    class ParserRange : public ExpressionParser {
+    public:
+        LogicExpression* parse(const char* exprName, MDNode* node, NodeSource* source) {
+            requireMinArgs(node, exprName, source, 2);
+            requireMaxArgs(node, exprName, source, 2);
+            return new LogicExpressionRange(parseMetadata(node->getOperand(1).get(), source), parseMetadata(node->getOperand(2).get(), source), source);
+        }
+    };
+    
+    class ParserOffset : public ExpressionParser {
+    public:
+        LogicExpression* parse(const char* exprName, MDNode* node, NodeSource* source) {
+            requireMinArgs(node, exprName, source, 2);
+            requireMaxArgs(node, exprName, source, 2);
+            return new LogicExpressionOffset(parseMetadata(node->getOperand(1).get(), source), parseMetadata(node->getOperand(2).get(), source), source);
+        }
+    };
+    
     /* ==========================
      * PARSER REGISTRY DATA TABLE
      * ==========================
@@ -967,6 +985,8 @@ namespace whyr {
         {"old",new ParserOld()},
         {"fresh.before",new ParserFresh(true)},
         {"fresh.after",new ParserFresh(false)},
+        {"range",new ParserRange()},
+        {"offset",new ParserOffset()},
     });
     map<string,ExpressionParser*>* ExpressionParser::getExpressionParsers() {
         return &parsers;
