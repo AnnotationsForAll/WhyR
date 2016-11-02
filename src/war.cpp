@@ -1138,6 +1138,22 @@ WarNode war_parse_fresh(bool before, WarNode node) {
     return ret;
 }
 
+WarNode war_parse_range(WarNode lhs, WarNode rhs) {
+    using namespace std; using namespace llvm; using namespace whyr;
+    
+    WarNode ret;
+    ret.expr = new LogicExpressionRange(lhs.expr, rhs.expr, warParserSource);
+    return ret;
+}
+
+WarNode war_parse_offset(WarNode lhs, WarNode rhs) {
+    using namespace std; using namespace llvm; using namespace whyr;
+    
+    WarNode ret;
+    ret.expr = new LogicExpressionOffset(lhs.expr, rhs.expr, warParserSource);
+    return ret;
+}
+
 // ================================
 // End of parser functions.
 // ================================

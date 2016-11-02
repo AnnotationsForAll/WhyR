@@ -16,6 +16,7 @@ old                                 { return TOKEN_OLD; }
 fresh                               { return TOKEN_FRESH; }
 before                              { return TOKEN_BEFORE; }
 after                               { return TOKEN_AFTER; }
+offset                              { return TOKEN_OFFSET; }
 sdiv                                { return TOKEN_OP_SDIV; }
 udiv                                { return TOKEN_OP_UDIV; }
 rem                                 { return TOKEN_OP_REM; }
@@ -87,6 +88,7 @@ i[0-9]+                             {
 "<="                                { return TOKEN_OP_LE; }
 "<{"                                { return TOKEN_PACKED_STRUCT_BEGIN; }
 "}>"                                { return TOKEN_PACKED_STRUCT_END; }
+"\.\."                              { return TOKEN_RANGE; }
 [a-zA-Z_][a-zA-Z0-9_]*              {
                                         yylval.token = yytext;
                                         return TOKEN_WORD;
