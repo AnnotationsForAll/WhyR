@@ -439,6 +439,15 @@ theory CustomTruncate
     axiom Truncate_monotonic_int1: forall x:real, i:int. x <= from_int i -> Int.(<=) (truncate x) i
     axiom Truncate_monotonic_int2: forall x:real, i:int. from_int i <= x -> Int.(<=) i (truncate x)
 end
+
+theory Range
+    use import int.Int
+    use import set.Set
+    
+    function range int int :(set int)
+    axiom range: forall i j x. x >= i /\ x < j <-> (mem x (range i j))
+    axiom range_neg: forall i j x. x < i \/ x >= j <-> not (mem x (range i j))
+end
 )";
 
     void addImports(ostream &out, NodeSource* source, TypeInfo &info) {
@@ -2578,6 +2587,7 @@ end
 theory MemorySet
     use import State
     use import Pointer
+    use import int.Int
     namespace import SET use import set.Set end
     
     type t
@@ -2597,6 +2607,10 @@ theory MemorySet
     function havoc state mem_set :state
     axiom havoc: forall s ms. forall e : pointer 'a.
     not (mem e ms) -> (load (havoc s ms) e) = (load s e)
+    
+    function offset_memset mem_set (SET.Set.set int) :mem_set
+    axiom offset_memset: forall ms s i. forall p : (pointer 'a).
+    (mem p ms) /\ (SET.Set.mem i s) -> (mem (offset_pointer p i) (offset_memset ms s))
 end
 )";
 
@@ -2629,12 +2643,15 @@ end
 theory MemorySet
     use import State
     use import Pointer
+    use import int.Int
+    namespace import SET use import set.Set end
     
     type mem_set
     constant empty : mem_set
     function add pointer mem_set :mem_set
     predicate mem pointer mem_set
     function havoc state mem_set :state
+    function offset_memset mem_set (SET.Set.set int) :mem_set
 end
 )";
     
