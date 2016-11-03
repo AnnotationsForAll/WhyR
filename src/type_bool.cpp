@@ -22,10 +22,6 @@ namespace whyr {
         return "bool";
     }
     
-    LogicType* LogicTypeBool::commonType(LogicType* other) {
-        return NULL;
-    }
-    
     bool LogicTypeBool::equals(LogicType* other) {
         return isa<LogicTypeBool>(other);
     }

@@ -63,8 +63,7 @@ namespace whyr {
         // All types of elements in this set should agree with the base type of this set.
         for (list<LogicExpression*>::iterator ii = elems.begin(); ii != elems.end(); ii++) {
             (*ii)->checkTypes();
-            LogicType* type = LogicType::commonType(baseType, (*ii)->returnType());
-            if (!type || !type->equals(baseType)) {
+            if (!(*ii)->returnType()->equals(baseType)) {
                 throw type_exception(("Cannot create a set of type '" + baseType->toString() + "' with an element of type '" + (*ii)->returnType()->toString() + "'"), this);
             }
         }

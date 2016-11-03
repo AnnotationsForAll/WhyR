@@ -185,8 +185,7 @@ namespace whyr {
                         LogicExpression* expr = ExpressionParser::parseMetadata(node->getOperand(0), new NodeSource(this, NULL, node->getOperand(0).get()));
                         expr->checkTypes();
                         
-                        LogicTypeBool boolType;
-                        if (!LogicType::commonType(expr->returnType(), &boolType)) {
+                        if (!isa<LogicTypeBool>(expr->returnType())) {
                             throw type_exception((string(kind == requiresKind ? "requires" : "ensures" ) + " clause requires an expression of type 'bool'; got type '" + expr->returnType()->toString() + "'"), NULL, new NodeSource(this));
                         }
                         
@@ -206,11 +205,7 @@ namespace whyr {
                             LogicExpression* expr = ExpressionParser::parseMetadata(subnode, new NodeSource(this, NULL, node->getOperand(0).get()));
                             expr->checkTypes();
                             
-                            // a void* pointer with a address space of -1 represents a pointer to anything in WhyR.
-                            // Note that void* pointers are illegal in LLVM proper.
-                            LogicTypeLLVM ptrType(PointerType::get(Type::getVoidTy(llvm->getContext()), -1));
-                            LogicTypeSet setType(&ptrType);
-                            if (LogicType::commonType(expr->returnType(), &setType)) {
+                            if (isa<LogicTypeSet>(expr->returnType()) && isa<LogicTypeLLVM>(cast<LogicTypeSet>(expr->returnType())->getType()) && cast<LogicTypeLLVM>(cast<LogicTypeSet>(expr->returnType())->getType())->getType()->isPointerTy()) {
                                 assigns.push_back(expr);
                             } else {
                                 throw type_exception(("assigns clause requires expressions of type 'set<void*>'; got an expression of type '" + expr->returnType()->toString() + "'"), NULL, new NodeSource(this));

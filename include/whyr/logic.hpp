@@ -104,26 +104,10 @@ namespace whyr {
         /// Converts the type to a human-readable format. This is NOT why3 format!
         virtual string toString();
         /**
-         * Tries to find the common supertype among this type and another. returns NULL if failed.
-         * In general, do NOT use this function. Use the static version of this function instead;
-         * this function is not symmetric, unlike the static version.
-         * 
-         * The caller owns the resulting LogicType. Free it when you are done.
-         */
-        virtual LogicType* commonType(LogicType* other);
-        /**
          * Returns whether or not this type is exactly equivalent to another type.
          * Note that you CANNOT compare pointers of LogicType s to check for equality!
          */
         virtual bool equals(LogicType* other);
-        /**
-         * The static version of commonType (use this one).
-         * Finds the common supertype among two types.
-         * Returns NULL if the types do not share a common supertype.
-         * 
-         * The caller owns the resulting LogicType. Free it when you are done.
-         */
-        static LogicType* commonType(LogicType* a, LogicType* b);
         /**
          * This returns the Why3 full theory name of the type, appending it to the stream.
          */

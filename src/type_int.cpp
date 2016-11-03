@@ -22,10 +22,6 @@ namespace whyr {
         return "int";
     }
     
-    LogicType* LogicTypeInt::commonType(LogicType* other) {
-        return NULL;
-    }
-    
     bool LogicTypeInt::equals(LogicType* other) {
         return isa<LogicTypeInt>(other);
     }

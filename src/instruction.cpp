@@ -42,8 +42,7 @@ namespace whyr {
                     LogicExpression* expr = ExpressionParser::parseMetadata(node->getOperand(0), new NodeSource(getFunction(), this->rawIR(), node->getOperand(0).get()));
                     expr->checkTypes();
                     
-                    LogicTypeBool boolType;
-                    if (!LogicType::commonType(expr->returnType(), &boolType)) {
+                    if (!isa<LogicTypeBool>(expr->returnType())) {
                         throw type_exception(string(kind == assumeKind ? "assume" : "assert" ) + " clause requires an expression of type 'bool'; got type '" + expr->returnType()->toString() + "'", NULL, new NodeSource(getFunction(), this->rawIR(), node->getOperand(0).get()));
                     }
                     

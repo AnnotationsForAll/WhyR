@@ -18,7 +18,7 @@ namespace whyr {
     static const int classID = LOGIC_EXPR_IFTE;
     LogicExpressionConditional::LogicExpressionConditional(LogicExpression* condition, LogicExpression* ifTrue, LogicExpression* ifFalse, NodeSource* source) : LogicExpression(source), condition{condition}, ifTrue{ifTrue}, ifFalse{ifFalse} {
         id = classID;
-        retType = LogicType::commonType(ifTrue->returnType(), ifFalse->returnType());
+        retType = ifTrue->returnType();
     }
     
     LogicExpressionConditional::~LogicExpressionConditional() {

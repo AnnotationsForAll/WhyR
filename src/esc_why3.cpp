@@ -2604,7 +2604,7 @@ theory MemorySet
     axiom member_exact: forall p : pointer 'a. forall s : mem_set 'a.
     (SET.Set.mem p s) -> (mem p s)
     axiom member_overlap: forall p q : pointer 'a. forall s : mem_set 'a.
-    (SET.Set.mem p s) /\ p.offset <= q.offset /\ p.offset + (bits p) >= q.offset + (bits q) -> (mem q s)
+    (SET.Set.mem p s) /\ p.base = q.base /\ p.offset <= q.offset /\ p.offset + (bits p) >= q.offset + (bits q) -> (mem q s)
     
     predicate subset (sub:mem_set 'a) (super:mem_set 'a) = forall x : pointer 'a. mem x sub -> mem x super
     
@@ -2650,12 +2650,12 @@ theory MemorySet
     use import int.Int
     namespace import SET use import set.Set end
     
-    type mem_set
-    constant empty : mem_set
-    function add pointer mem_set :mem_set
-    predicate mem pointer mem_set
-    function havoc state mem_set :state
-    function offset_memset mem_set (SET.Set.set int) :mem_set
+    type mem_set 'a
+    constant empty : mem_set 'a
+    function add pointer (mem_set 'a) :(mem_set 'a)
+    predicate mem pointer (mem_set 'a)
+    function havoc state (mem_set 'a) :state
+    function offset_memset (mem_set 'a) (SET.Set.set int) :(mem_set 'a)
 end
 )";
     
