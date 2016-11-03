@@ -13,10 +13,12 @@ This is where main() lies, as well as general functions for using this applicati
 #include <whyr/esc_why3.hpp>
 #include <whyr/module.hpp>
 #include <whyr/rte.hpp>
+#include <whyr/exec_why3.hpp>
 
 #include <cstdlib>
 #include <iostream>
 #include <fstream>
+#include <sstream>
 #include <cstring>
 
 #include "optionparser.h"
@@ -44,6 +46,8 @@ enum Options {
     COMBINE_GOALS,
     INPUT_FORMAT,
     VACUOUS_CHECKS,
+    PROVE,
+    PROVER,
 };
 static const option::Descriptor usage[] = {
     { UNKNOWN, 0, "", "", option::Arg::None,                        "USAGE: whyr [<option>...] <file>" },
@@ -67,6 +71,8 @@ static const option::Descriptor usage[] = {
     { VACUOUS_CHECKS, 0, "V", "vacuous-checks", option::Arg::None,  "    --vacuous-checks (-V) - If specified, adds vacuous assertions to all goals." },
     { UNKNOWN, 0, "", "", option::Arg::None,                        "                            A vacuous goal is intended to fail or time out." },
     { UNKNOWN, 0, "", "", option::Arg::None,                        "                            if a vacuous goal passes, there is a contradiction in logic." },
+    { PROVE, 0, "p", "prove", option::Arg::None,                    "    --prove (-p)          - If specified, runs output through Why3 and displays results." },
+    { PROVER, 0, "P", "prover", requireArgument,                    "    --prover (-P)         - Specify the prover to run with '-p'. Default is 'alt-ergo'." },
     { 0, 0, 0, 0, 0, 0 }
 };
 
@@ -185,13 +191,16 @@ int main(int argc, char** argv) {
     if (settings.rte) {
         addRTE(mod);
     }
-
+    
+    std::ostringstream out;
+    generateWhy3(out, mod);
+    
     if (options[OUTPUT]) {
-        std::ofstream out(options[OUTPUT].arg);
-        generateWhy3(out, mod);
-        out.flush();
-    } else {
-        generateWhy3(std::cout, mod);
+        std::ofstream fout(options[OUTPUT].arg);
+        fout << out.str();
+        fout.flush();
+    } else if (!options[PROVE]) {
+        std::cout << out.str();
     }
     
     int exitCode = 0;
@@ -208,6 +217,50 @@ int main(int argc, char** argv) {
         std::cerr << "error: ";
         ii->printMessage(std::cerr);
         exitCode = 1;
+    }
+    
+    if (options[PROVE]) {
+        std::string pin = out.str();
+        std::ostringstream pout;
+        whyr::execWhy3(pin, pout, false, options[PROVER] ? options[PROVER].arg : whyr::PROVER_ALT_ERGO);
+        
+        whyr::Why3Output why3out(pout.str().c_str());
+        if (why3out.error) {
+            std::cerr << "error: in executing why3: " << why3out.message;
+        } else {
+            for (std::list<whyr::Why3Goal>::iterator ii = why3out.goals.begin(); ii != why3out.goals.end(); ii++) {
+                std::cout << ii->goal << ": ";
+                switch (ii->status) {
+                    case whyr::Why3Goal::STATUS_VALID: {
+                        std::cout << "VALID";
+                        break;
+                    }
+                    case whyr::Why3Goal::STATUS_FAIL: {
+                        std::cout << "FAILURE";
+                        break;
+                    }
+                    case whyr::Why3Goal::STATUS_TIMEOUT: {
+                        std::cout << "TIMEOUT";
+                        break;
+                    }
+                    case whyr::Why3Goal::STATUS_UNKNOWN: {
+                        std::cout << "UNKNOWN";
+                        break;
+                    }
+                }
+                std::cout << " (" << ii->time << "s)";
+                if (ii->steps != -1) {
+                    std::cout << " (" << ii->steps << " steps)";
+                }
+                std::cout << std::endl;
+                
+                if (ii->status == whyr::Why3Goal::STATUS_FAIL) {
+                    std::cout << "=== Why3 stdout:" << std::endl;
+                    std::cout << pout.str();
+                    std::cout << "===" << std::endl;
+                }
+            }
+        }
     }
     
     delete mod;
