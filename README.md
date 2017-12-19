@@ -15,7 +15,7 @@ WhyR is a tool to convert programs written in [LLVM IR](http://llvm.org/) into a
 * Why3 model generation for the following LLVM constructs:
   * Most common LLVM instructions: Arithmetic, bitwise operations, casts, branches, calls, memory operations...
   * LLVM data types:
-  * Integers of any size
+    * Integers of any size
     * Floats, doubles
     * Array types
     * Structure types
